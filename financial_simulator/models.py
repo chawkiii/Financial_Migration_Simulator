@@ -18,9 +18,11 @@ class ProjectionResult:
         projections: list,
         final_balance: float,
         goal_reached_month: int | None,
-        went_negative: bool,
+        went_negative_during_simulation: bool,
+        insolvent_before_income: bool,
     ):
         self.projections = projections
         self.final_balance = final_balance
         self.goal_reached_month = goal_reached_month
-        self.went_negative = went_negative
+        self.went_negative_during_simulation = went_negative_during_simulation
+        self.insolvent_before_income = insolvent_before_income
