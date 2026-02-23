@@ -47,6 +47,25 @@ def main():
             f"Start: {p.starting_balance} | "
             f"End: {p.ending_balance}"
         )
+    
+    score = engine.calculate_score(result)
+
+    print("\n--- Financial Health Score ---")
+    print(f"Total Score: {score['total_score']} / 100")
+    print(f"Survival: {score['survival']} / 25")
+    print(f"Margin: {score['margin']} / 20")
+    print(f"Growth: {score['growth']} / 20")
+    print(f"Cushion: {score['cushion']} / 20")
+    print(f"Goal: {score['goal']} / 15")
+
+    level = engine.interpret_score(score["total_score"])
+    diagnosis = engine.generate_diagnosis(score)
+
+    print(f"\nFinancial Level: {level}")
+
+    print("\nDiagnosis:")
+    for msg in diagnosis:
+        print("-", msg)
 
 
 if __name__ == "__main__":
