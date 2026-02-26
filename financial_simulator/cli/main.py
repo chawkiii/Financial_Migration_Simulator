@@ -1,5 +1,6 @@
-from inputs import FinancialInputs
-from engine import ProjectionEngine
+from financial_simulator.core.inputs import FinancialInputs
+from financial_simulator.core.engine import ProjectionEngine
+from financial_simulator.core.scoring import FinancialScorer
 
 
 def main():
@@ -48,7 +49,8 @@ def main():
             f"End: {p.ending_balance}"
         )
     
-    score = engine.calculate_score(result)
+    scorer = FinancialScorer(inputs)
+    score = scorer.calculate(result)
 
     print("\n--- Financial Health Score ---")
     print(f"Total Score: {score['total_score']} / 100")
