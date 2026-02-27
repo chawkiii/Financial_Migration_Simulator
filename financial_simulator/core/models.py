@@ -1,3 +1,4 @@
+# financial_simulator/core/models.py
 class MonthlyProjection:
     def __init__(
         self,

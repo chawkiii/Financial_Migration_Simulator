@@ -1,3 +1,4 @@
+# financial_simulator/core/inputs.py
 class FinancialInputs:
     def __init__(
         self,

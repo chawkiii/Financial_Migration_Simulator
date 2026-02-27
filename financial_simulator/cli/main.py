@@ -1,3 +1,4 @@
+# financial_simulator/cli/main.py
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.engine import ProjectionEngine
 from financial_simulator.core.scoring import FinancialScorer
