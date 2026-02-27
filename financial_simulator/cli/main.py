@@ -5,13 +5,13 @@ from financial_simulator.core.scoring import FinancialScorer
 
 def main():
     inputs = FinancialInputs(
-        initial_savings=4000,
-        one_time_cost=2000,
-        monthly_income=3000,
+        initial_savings=10000,
+        one_time_cost=3500,
+        monthly_income=2560,
         monthly_expenses=2200,
         months=12,
-        savings_goal=20000,
-        months_without_income=2,
+        savings_goal=8000,
+        months_without_income=1,
     )
 
     print("Inputs successfully created!")
