@@ -158,8 +158,9 @@ def test_months_without_income_greater_than_projection():
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # Vérifie qu'il n'y a jamais eu de revenu positif
-    assert result.insolvent_before_income is True or result.went_negative_during_simulation in [True, False]
+    # Vérifie qu'aucun mois n'a de revenu positif
+    for projection in result.projections:
+        assert projection.net_cashflow == -2000
 
 def test_zero_income_scenario():
     inputs = FinancialInputs(
@@ -224,3 +225,57 @@ def test_zero_month_projection():
             months_without_income=0,
             savings_goal=0
         )
+
+def test_max_negative_balance():
+    inputs = FinancialInputs(
+        initial_savings=1000,
+        one_time_cost=0,
+        monthly_income=0,
+        monthly_expenses=1500,
+        months=2,
+        savings_goal=0,
+    )
+
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    # 1000 - 1500 = -500
+    # -500 -1500 = -2000
+    assert result.max_negative_balance == -2000
+
+
+def test_average_cashflow():
+    inputs = FinancialInputs(
+        initial_savings=5000,
+        one_time_cost=0,
+        monthly_income=3000,
+        monthly_expenses=1000,
+        months=2,
+        savings_goal=0,
+    )
+
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    # cashflow constant = 2000
+    assert result.average_cashflow == 2000
+
+
+def test_min_cushion():
+    inputs = FinancialInputs(
+        initial_savings=6000,
+        one_time_cost=0,
+        monthly_income=0,
+        monthly_expenses=2000,
+        months=2,
+        savings_goal=0,
+    )
+
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    # Balances: 6000 → 4000 → 2000
+    # Cushion months: 3 → 2 → 1
+    assert result.min_cushion == 1
+
+

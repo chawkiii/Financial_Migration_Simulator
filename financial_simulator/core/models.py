@@ -16,14 +16,22 @@ class MonthlyProjection:
 class ProjectionResult:
     def __init__(
         self,
-        projections: list,
-        final_balance: float,
-        goal_reached_month: int | None,
-        went_negative_during_simulation: bool,
-        insolvent_before_income: bool,
+        projections,
+        final_balance,
+        goal_reached_month,
+        went_negative_during_simulation,
+        insolvent_before_income,
+        max_negative_balance=0,
+        average_cashflow=0,
+        min_cushion=0,
     ):
         self.projections = projections
         self.final_balance = final_balance
         self.goal_reached_month = goal_reached_month
         self.went_negative_during_simulation = went_negative_during_simulation
         self.insolvent_before_income = insolvent_before_income
+
+        # NEW V2.1 fields
+        self.max_negative_balance = max_negative_balance
+        self.average_cashflow = average_cashflow
+        self.min_cushion = min_cushion
