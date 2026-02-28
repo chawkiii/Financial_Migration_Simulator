@@ -202,7 +202,7 @@ def test_unreachable_goal():
         one_time_cost=0,
         months=12,
         months_without_income=0,
-        savings_goal=100000  # objectif irréaliste
+        savings_goal=100000 
     )
 
     engine = ProjectionEngine(inputs)
