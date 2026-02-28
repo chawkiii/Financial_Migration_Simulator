@@ -9,6 +9,7 @@ class FinancialInputs:
         months: int,
         savings_goal: float,
         months_without_income: int = 0,
+        expenses: dict[str, float] | None = None,
     ):
         self.initial_savings = initial_savings
         self.one_time_cost = one_time_cost
@@ -17,6 +18,7 @@ class FinancialInputs:
         self.months = months
         self.savings_goal = savings_goal
         self.months_without_income = months_without_income
+        self.expenses = expenses
 
         self.validate()
 
@@ -38,3 +40,8 @@ class FinancialInputs:
         for value in values:
             if value < 0:
                 raise ValueError("Financial values cannot be negative")
+        
+    def get_total_expenses(self) -> float:
+        if self.expenses:
+            return sum(self.expenses.values())
+        return self.monthly_expenses

@@ -3,6 +3,7 @@ from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.engine import ProjectionEngine
 from financial_simulator.core.scoring import FinancialScorer
 import json
+import pytest
 
 
 def test_projection_result_serializable():
@@ -234,8 +235,6 @@ def test_unreachable_goal():
     assert result.goal_reached_month is None
 
 
-import pytest
-
 def test_zero_month_projection():
     with pytest.raises(ValueError):
         FinancialInputs(
@@ -300,4 +299,48 @@ def test_min_cushion():
     # Cushion months: 3 → 2 → 1
     assert result.min_cushion == 1
 
+def test_categorized_expenses_override_monthly():
+    inputs = FinancialInputs(
+        initial_savings=5000,
+        one_time_cost=0,
+        monthly_income=3000,
+        monthly_expenses=9999,  # Ne doit pas être utilisé
+        months=1,
+        savings_goal=0,
+        expenses={
+            "rent": 1000,
+            "food": 500,
+        }
+    )
 
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    # cashflow = 3000 - 1500
+    assert result.projections[0].net_cashflow == 1500
+
+def test_expenses_dict_overrides_monthly_expenses():
+    inputs = FinancialInputs(
+        initial_savings=10000,
+        one_time_cost=2000,
+        monthly_income=4000,
+        monthly_expenses=1000,  # Valeur par défaut
+        months=3,
+        savings_goal=5000,
+        expenses={
+            "rent": 1500,
+            "food": 500,
+            "utilities": 300
+        }
+    )
+
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    # Total des dépenses devrait être la somme du dict
+    total_expenses = sum(inputs.expenses.values())
+    assert total_expenses == 2300
+
+    # Vérifie que le cashflow du premier mois est correct
+    expected_cashflow_month1 = inputs.monthly_income - total_expenses
+    assert engine._get_monthly_cashflow(1) == expected_cashflow_month1

@@ -17,11 +17,11 @@ class ProjectionEngine:
 
     def _get_monthly_cashflow(self, month: int) -> float:
         if month <= self.inputs.months_without_income:
-            return -self.inputs.monthly_expenses
-        return self.inputs.monthly_income - self.inputs.monthly_expenses
+            return -self.inputs.get_total_expenses()
+        return self.inputs.monthly_income - self.inputs.get_total_expenses()
 
     def _get_minimum_required_before_income(self) -> float:
-        return self.inputs.months_without_income * self.inputs.monthly_expenses
+        return self.inputs.months_without_income * self.inputs.get_total_expenses()
 
     # =============================
     # Simulation
@@ -77,7 +77,7 @@ class ProjectionEngine:
         # Statistiques globales
         net_cashflows = [p.net_cashflow for p in projections] if projections else [0]
         balances = [p.ending_balance for p in projections] if projections else [current_balance]
-        min_cushion = min(b / self.inputs.monthly_expenses if self.inputs.monthly_expenses else 0 for b in balances)
+        min_cushion = min(b / self.inputs.get_total_expenses() if self.inputs.get_total_expenses() > 0 else 0 for b in balances)
 
         return ProjectionResult(
             projections=projections,
@@ -101,7 +101,7 @@ class ProjectionEngine:
         if balance >= self.inputs.savings_goal:
             return self.inputs.months_without_income
 
-        net_cashflow = self.inputs.monthly_income - self.inputs.monthly_expenses
+        net_cashflow = self.inputs.monthly_income - self.inputs.get_total_expenses()
         if net_cashflow <= 0:
             return None
 
