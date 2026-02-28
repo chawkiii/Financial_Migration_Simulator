@@ -2,6 +2,28 @@
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.engine import ProjectionEngine
 from financial_simulator.core.scoring import FinancialScorer
+import json
+
+
+def test_projection_result_serializable():
+    inputs = FinancialInputs(
+        initial_savings=5000,
+        one_time_cost=0,
+        monthly_income=3000,
+        monthly_expenses=1000,
+        months=2,
+        savings_goal=0,
+    )
+
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    result_dict = result.to_dict()
+
+    # Vérifie que ça peut être converti en JSON
+    json.dumps(result_dict)
+
+    assert isinstance(result_dict["projections"], list)
 
 
 def test_negative_margin_triggers_negative_balance():
