@@ -1,0 +1,83 @@
+{
+    "final_balance": 8260,
+    "goal_reached_month": 12,
+    "went_negative_during_simulation": false,
+    "insolvent_before_income": false,
+    "max_negative_balance": 0,
+    "average_cashflow": 146.66666666666666,
+    "min_cushion": 1.9545454545454546,
+    "projections": [
+        {
+            "month_number": 1,
+            "starting_balance": 6500,
+            "net_cashflow": -2200,
+            "ending_balance": 4300
+        },
+        {
+            "month_number": 2,
+            "starting_balance": 4300,
+            "net_cashflow": 360,
+            "ending_balance": 4660
+        },
+        {
+            "month_number": 3,
+            "starting_balance": 4660,
+            "net_cashflow": 360,
+            "ending_balance": 5020
+        },
+        {
+            "month_number": 4,
+            "starting_balance": 5020,
+            "net_cashflow": 360,
+            "ending_balance": 5380
+        },
+        {
+            "month_number": 5,
+            "starting_balance": 5380,
+            "net_cashflow": 360,
+            "ending_balance": 5740
+        },
+        {
+            "month_number": 6,
+            "starting_balance": 5740,
+            "net_cashflow": 360,
+            "ending_balance": 6100
+        },
+        {
+            "month_number": 7,
+            "starting_balance": 6100,
+            "net_cashflow": 360,
+            "ending_balance": 6460
+        },
+        {
+            "month_number": 8,
+            "starting_balance": 6460,
+            "net_cashflow": 360,
+            "ending_balance": 6820
+        },
+        {
+            "month_number": 9,
+            "starting_balance": 6820,
+            "net_cashflow": 360,
+            "ending_balance": 7180
+        },
+        {
+            "month_number": 10,
+            "starting_balance": 7180,
+            "net_cashflow": 360,
+            "ending_balance": 7540
+        },
+        {
+            "month_number": 11,
+            "starting_balance": 7540,
+            "net_cashflow": 360,
+            "ending_balance": 7900
+        },
+        {
+            "month_number": 12,
+            "starting_balance": 7900,
+            "net_cashflow": 360,
+            "ending_balance": 8260
+        }
+    ]
+}
