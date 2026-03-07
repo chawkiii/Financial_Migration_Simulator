@@ -344,3 +344,26 @@ def test_expenses_dict_overrides_monthly_expenses():
     # Vérifie que le cashflow du premier mois est correct
     expected_cashflow_month1 = inputs.monthly_income - total_expenses
     assert engine._get_monthly_cashflow(1) == expected_cashflow_month1
+
+
+import random
+
+
+def test_randomized_simulations_do_not_crash():
+
+    for _ in range(100):
+
+        inputs = FinancialInputs(
+            initial_savings=random.randint(0, 20000),
+            one_time_cost=random.randint(0, 5000),
+            monthly_income=random.randint(0, 5000),
+            monthly_expenses=random.randint(500, 4000),
+            months=random.randint(1, 24),
+            months_without_income=random.randint(0, 6),
+            savings_goal=random.randint(0, 30000),
+        )
+
+        engine = ProjectionEngine(inputs)
+        result = engine.simulate(force=True)
+
+        assert result.final_balance is not None

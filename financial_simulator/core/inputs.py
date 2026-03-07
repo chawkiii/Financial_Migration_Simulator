@@ -24,10 +24,19 @@ class FinancialInputs:
 
     def validate(self):
         if self.months <= 0:
-            raise ValueError("Months must be greater than 0")
+            raise ValueError("Projection months must be greater than zero")
+
+        if self.monthly_income < 0:
+            raise ValueError("Monthly income cannot be negative")
+
+        if self.monthly_expenses < 0:
+            raise ValueError("Monthly expenses cannot be negative")
         
         if self.months_without_income < 0:
-            raise ValueError("months_without_income cannot be negative")
+            raise ValueError("Months without income cannot be negative")
+        
+        if self.one_time_cost > self.initial_savings:
+            pass  # allowed but warning in result that insolvency is likely and user should consider reducing one-time cost or increasing initial savings
         
         values = [
             self.initial_savings,

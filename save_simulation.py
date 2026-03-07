@@ -1,8 +1,9 @@
+# save_simulation.py
 import json
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.engine import ProjectionEngine
 
-# 💖 Tes inputs chéris
+
 inputs = FinancialInputs(
     initial_savings=10000,
     one_time_cost=3500,
@@ -16,8 +17,8 @@ inputs = FinancialInputs(
 engine = ProjectionEngine(inputs)
 result = engine.simulate()
 
-# 🔥 Sauvegarde en JSON
+# Sauvegarde en JSON
 with open("simulation_v2_2.json", "w") as f:
     json.dump(result.to_dict(), f, indent=4)
 
-print("JSON saved as simulation_v2_2.json 💖🔥")
+print("JSON saved as simulation_v2_2.json")

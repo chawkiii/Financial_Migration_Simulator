@@ -15,6 +15,7 @@ class SimulationInput(BaseModel):
     months: int
     savings_goal: float
     months_without_income: int = 0
+    expenses: dict[str, float] | None = None
 
 @app.post("/simulate")
 def run_simulation(data: SimulationInput):
@@ -27,7 +28,7 @@ def run_simulation(data: SimulationInput):
     return {
         "final_balance": result.final_balance,
         "goal_reached_month": result.goal_reached_month,
-        "went_negative": result.went_negative_during_simulation,
+        "went_negative_during_simulation": result.went_negative_during_simulation,
         "diagnosis": engine.generate_diagnosis(score),
         "score": score,
         "monthly_projections": [

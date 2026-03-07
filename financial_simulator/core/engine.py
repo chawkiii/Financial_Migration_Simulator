@@ -1,12 +1,14 @@
-# financial_simulator/core/engine.py (V2.1)
+# financial_simulator/core/engine.py
+from math import ceil
+
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.models import MonthlyProjection, ProjectionResult
-from math import ceil
 
 
 class ProjectionEngine:
     def __init__(self, financial_inputs: FinancialInputs):
         self.inputs = financial_inputs
+        self.total_expenses = self.inputs.get_total_expenses()
 
     # =============================
     # Core Helpers
@@ -17,11 +19,12 @@ class ProjectionEngine:
 
     def _get_monthly_cashflow(self, month: int) -> float:
         if month <= self.inputs.months_without_income:
-            return -self.inputs.get_total_expenses()
-        return self.inputs.monthly_income - self.inputs.get_total_expenses()
+            return -self.total_expenses
+
+        return self.inputs.monthly_income - self.total_expenses
 
     def _get_minimum_required_before_income(self) -> float:
-        return self.inputs.months_without_income * self.inputs.get_total_expenses()
+        return self.inputs.months_without_income * self.total_expenses
 
     # =============================
     # Simulation
@@ -36,7 +39,6 @@ class ProjectionEngine:
         current_balance = self._get_initial_balance()
         minimum_required = self._get_minimum_required_before_income()
 
-        # Insolvabilité avant le premier revenu
         if current_balance < minimum_required:
             insolvent_before_income = True
             if not force:
@@ -51,8 +53,8 @@ class ProjectionEngine:
                     min_cushion=0,
                 )
 
-        # Boucle sur tous les mois
         for month in range(1, self.inputs.months + 1):
+
             starting_balance = current_balance
             monthly_cashflow = self._get_monthly_cashflow(month)
             ending_balance = starting_balance + monthly_cashflow
@@ -74,10 +76,13 @@ class ProjectionEngine:
 
             current_balance = ending_balance
 
-        # Statistiques globales
-        net_cashflows = [p.net_cashflow for p in projections] if projections else [0]
-        balances = [p.ending_balance for p in projections] if projections else [current_balance]
-        min_cushion = min(b / self.inputs.get_total_expenses() if self.inputs.get_total_expenses() > 0 else 0 for b in balances)
+        net_cashflows = [p.net_cashflow for p in projections]
+        balances = [p.ending_balance for p in projections]
+
+        min_cushion = min(
+            max(0, b / self.total_expenses) if self.total_expenses > 0 else 0
+            for b in balances
+        )
 
         return ProjectionResult(
             projections=projections,
@@ -95,25 +100,28 @@ class ProjectionEngine:
     # =============================
 
     def months_to_reach_goal(self) -> int | None:
+
         balance = self._get_initial_balance()
-        balance -= self._get_minimum_required_before_income()
 
         if balance >= self.inputs.savings_goal:
-            return self.inputs.months_without_income
+            return 0
 
-        net_cashflow = self.inputs.monthly_income - self.inputs.get_total_expenses()
+        net_cashflow = self.inputs.monthly_income - self.total_expenses
+
         if net_cashflow <= 0:
             return None
 
         remaining = self.inputs.savings_goal - balance
         months_after_income = ceil(remaining / net_cashflow)
+
         return self.inputs.months_without_income + months_after_income
 
     # =============================
-    # Scoring / Diagnostics
+    # Diagnostics
     # =============================
 
     def interpret_score(self, total_score: int) -> str:
+
         if total_score >= 80:
             return "Excellent"
         elif total_score >= 60:
@@ -124,17 +132,27 @@ class ProjectionEngine:
             return "High Risk"
 
     def generate_diagnosis(self, score: dict) -> list:
+
         messages = []
+
         if score["survival"] == 0:
             messages.append("Your emergency savings are insufficient.")
+
         if score["margin"] == 0:
             messages.append("Your monthly expenses exceed your income.")
+
         if score["growth"] == 0:
             messages.append("Your financial situation is not improving.")
+
         if score["cushion"] <= 5:
-            messages.append("Your safety cushion is very thin.")
+            messages.append("Your financial safety cushion is critically low.")
+        elif score["cushion"] <= 10:
+            messages.append("Your financial cushion could be improved.")
+
         if score["goal"] == 0:
             messages.append("Your savings goal is not reachable within the timeframe.")
+
         if not messages:
             messages.append("Your financial profile looks healthy.")
+
         return messages
