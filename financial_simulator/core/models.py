@@ -1,10 +1,18 @@
 # financial_simulator/core/models.py
 class MonthlyProjection:
-    def __init__(self, month_number, starting_balance, net_cashflow, ending_balance):
+    def __init__(
+        self,
+        month_number,
+        starting_balance,
+        net_cashflow,
+        ending_balance,
+        purchase_cost=0
+    ):
         self.month_number = month_number
         self.starting_balance = starting_balance
         self.net_cashflow = net_cashflow
         self.ending_balance = ending_balance
+        self.purchase_cost = purchase_cost
 
     def to_dict(self):
         return {
@@ -12,6 +20,7 @@ class MonthlyProjection:
             "starting_balance": self.starting_balance,
             "net_cashflow": self.net_cashflow,
             "ending_balance": self.ending_balance,
+            "purchase_cost": self.purchase_cost
         }
 
 

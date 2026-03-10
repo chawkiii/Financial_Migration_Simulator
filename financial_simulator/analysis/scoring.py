@@ -1,4 +1,4 @@
-# financial_simulator/core/scoring.py
+# financial_simulator/analysis/scoring.py
 from financial_simulator.core.models import ProjectionResult
 from financial_simulator.core.inputs import FinancialInputs
 

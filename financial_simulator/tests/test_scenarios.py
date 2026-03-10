@@ -1,12 +1,14 @@
 # financial_simulator/tests/test_scenarios.py
-
 import pytest
+
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.engine import ProjectionEngine
-from financial_simulator.core.scoring import FinancialScorer
+from financial_simulator.analysis.scoring import FinancialScorer
+from financial_simulator.analysis.diagnostics import FinancialDiagnostics
 
 
 scenarios = [
+
     pytest.param(
         {
             "initial_savings": 15000,
@@ -19,6 +21,7 @@ scenarios = [
         },
         id="stable_growth"
     ),
+
     pytest.param(
         {
             "initial_savings": 2000,
@@ -31,6 +34,7 @@ scenarios = [
         },
         id="early_insolvency"
     ),
+
     pytest.param(
         {
             "initial_savings": 5000,
@@ -48,6 +52,7 @@ scenarios = [
 
 @pytest.mark.parametrize("scenario", scenarios)
 def test_scenarios_run_without_crash(scenario):
+
     inputs = FinancialInputs(**scenario)
 
     engine = ProjectionEngine(inputs)
@@ -56,7 +61,9 @@ def test_scenarios_run_without_crash(scenario):
     scorer = FinancialScorer(inputs)
     score = scorer.calculate(result)
 
+    diagnosis = FinancialDiagnostics.build_diagnosis(score)
+
     assert result.final_balance is not None
     assert isinstance(score, dict)
     assert 0 <= score["total_score"] <= 100
-    assert isinstance(engine.generate_diagnosis(score), list)
+    assert isinstance(diagnosis["messages"], list)

@@ -1,8 +1,9 @@
 # financial_simulator/cli/main_interactive.py
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.engine import ProjectionEngine
-from financial_simulator.core.scoring import FinancialScorer
+from financial_simulator.analysis.scoring import FinancialScorer
 from financial_simulator.core.hints import FIELD_HINTS
+from financial_simulator.analysis.diagnostics import FinancialDiagnostics
 
 def print_hint(field_name):
     hint = FIELD_HINTS.get(field_name)
@@ -73,13 +74,15 @@ def main():
     print(f"Cushion: {score['cushion']} / 15")
     print(f"Goal: {score['goal']} / 10")
 
-    level = engine.interpret_score(score["total_score"])
-    diagnosis = engine.generate_diagnosis(score)
+    diagnosis = FinancialDiagnostics.build_diagnosis(score)
+
+    level = diagnosis["level"]
+    messages = diagnosis["messages"]
 
     print(f"\nFinancial Level: {level}")
 
     print("\nDiagnosis:")
-    for msg in diagnosis:
+    for msg in messages:
         print("-", msg)
 
     print("\nsimulation terminée avec succès !")

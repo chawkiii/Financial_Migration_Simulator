@@ -1,5 +1,6 @@
 # financial_simulator/core/inputs.py
 class FinancialInputs:
+
     def __init__(
         self,
         initial_savings: float,
@@ -10,7 +11,11 @@ class FinancialInputs:
         savings_goal: float,
         months_without_income: int = 0,
         expenses: dict[str, float] | None = None,
+        tax_rate: float = 0.0,
+        future_purchases: list[dict] | None = None,
+        province: str | None = None
     ):
+
         self.initial_savings = initial_savings
         self.one_time_cost = one_time_cost
         self.monthly_income = monthly_income
@@ -19,6 +24,10 @@ class FinancialInputs:
         self.savings_goal = savings_goal
         self.months_without_income = months_without_income
         self.expenses = expenses
+
+        self.tax_rate = tax_rate
+        self.future_purchases = future_purchases or []
+        self.province = province
 
         self.validate()
 

@@ -1,6 +1,7 @@
 # financial_simulator/core/engine.py
-from math import ceil
 
+from math import ceil
+from financial_simulator.scenarios.canada import get_province_data
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.models import MonthlyProjection, ProjectionResult
 
@@ -18,10 +19,13 @@ class ProjectionEngine:
         return self.inputs.initial_savings - self.inputs.one_time_cost
 
     def _get_monthly_cashflow(self, month: int) -> float:
+
+        net_income = self.inputs.monthly_income * (1 - self.inputs.tax_rate)
+
         if month <= self.inputs.months_without_income:
             return -self.total_expenses
 
-        return self.inputs.monthly_income - self.total_expenses
+        return net_income - self.total_expenses
 
     def _get_minimum_required_before_income(self) -> float:
         return self.inputs.months_without_income * self.total_expenses
@@ -56,8 +60,17 @@ class ProjectionEngine:
         for month in range(1, self.inputs.months + 1):
 
             starting_balance = current_balance
+
             monthly_cashflow = self._get_monthly_cashflow(month)
-            ending_balance = starting_balance + monthly_cashflow
+
+            purchase_cost = 0
+
+            if self.inputs.future_purchases:
+                for purchase in self.inputs.future_purchases:
+                    if purchase["month"] == month:
+                        purchase_cost += purchase["amount"]
+
+            ending_balance = starting_balance + monthly_cashflow - purchase_cost
 
             if ending_balance < 0:
                 went_negative_during_simulation = True
@@ -71,6 +84,7 @@ class ProjectionEngine:
                     starting_balance=starting_balance,
                     net_cashflow=monthly_cashflow,
                     ending_balance=ending_balance,
+                    purchase_cost=purchase_cost
                 )
             )
 
@@ -116,43 +130,3 @@ class ProjectionEngine:
 
         return self.inputs.months_without_income + months_after_income
 
-    # =============================
-    # Diagnostics
-    # =============================
-
-    def interpret_score(self, total_score: int) -> str:
-
-        if total_score >= 80:
-            return "Excellent"
-        elif total_score >= 60:
-            return "Stable"
-        elif total_score >= 40:
-            return "Fragile"
-        else:
-            return "High Risk"
-
-    def generate_diagnosis(self, score: dict) -> list:
-
-        messages = []
-
-        if score["survival"] == 0:
-            messages.append("Your emergency savings are insufficient.")
-
-        if score["margin"] == 0:
-            messages.append("Your monthly expenses exceed your income.")
-
-        if score["growth"] == 0:
-            messages.append("Your financial situation is not improving.")
-
-        if score["cushion"] <= 5:
-            messages.append("Your financial safety cushion is critically low.")
-        elif score["cushion"] <= 10:
-            messages.append("Your financial cushion could be improved.")
-
-        if score["goal"] == 0:
-            messages.append("Your savings goal is not reachable within the timeframe.")
-
-        if not messages:
-            messages.append("Your financial profile looks healthy.")
-
-        return messages

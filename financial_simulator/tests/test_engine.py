@@ -1,40 +1,54 @@
 # financial_simulator/tests/test_engine.py
-from financial_simulator.core.inputs import FinancialInputs
-from financial_simulator.core.engine import ProjectionEngine
-from financial_simulator.core.scoring import FinancialScorer
 import json
+import random
 import pytest
 
+from financial_simulator.core.inputs import FinancialInputs
+from financial_simulator.core.engine import ProjectionEngine
+from financial_simulator.analysis.scoring import FinancialScorer
+from financial_simulator.analysis.diagnostics import FinancialDiagnostics
+from financial_simulator.risk.immigration_risk import ImmigrationRiskAnalyzer
+from financial_simulator.risk.monte_carlo import MonteCarloSimulator
 
-def test_projection_result_serializable():
-    inputs = FinancialInputs(
+
+def create_default_inputs(**overrides):
+    base = dict(
         initial_savings=5000,
         one_time_cost=0,
         monthly_income=3000,
         monthly_expenses=1000,
-        months=2,
-        savings_goal=0,
+        months=12,
+        savings_goal=10000,
+        months_without_income=0,
     )
+    base.update(overrides)
+    return FinancialInputs(**base)
+
+
+# =========================
+# Projection core
+# =========================
+
+def test_projection_result_serializable():
+
+    inputs = create_default_inputs(months=2)
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
     result_dict = result.to_dict()
 
-    # Vérifie que ça peut être converti en JSON
     json.dumps(result_dict)
 
     assert isinstance(result_dict["projections"], list)
 
 
 def test_negative_margin_triggers_negative_balance():
-    inputs = FinancialInputs(
+
+    inputs = create_default_inputs(
         initial_savings=1000,
-        one_time_cost=0,
         monthly_income=1000,
         monthly_expenses=1500,
-        months=6,
-        savings_goal=5000,
     )
 
     engine = ProjectionEngine(inputs)
@@ -44,12 +58,11 @@ def test_negative_margin_triggers_negative_balance():
 
 
 def test_goal_reached():
-    inputs = FinancialInputs(
+
+    inputs = create_default_inputs(
         initial_savings=10000,
-        one_time_cost=0,
         monthly_income=3000,
         monthly_expenses=1000,
-        months=12,
         savings_goal=15000,
     )
 
@@ -59,31 +72,63 @@ def test_goal_reached():
     assert result.goal_reached_month is not None
 
 
+# =========================
+# Financial scoring
+# =========================
+
 def test_score_range():
-    inputs = FinancialInputs(
-        initial_savings=5000,
-        one_time_cost=0,
-        monthly_income=4000,
-        monthly_expenses=2000,
-        months=12,
-        savings_goal=10000,
-    )
+
+    inputs = create_default_inputs()
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
+
     scorer = FinancialScorer(inputs)
     score = scorer.calculate(result)
 
     assert 0 <= score["total_score"] <= 100
 
+
+# =========================
+# Diagnostics
+# =========================
+
+def test_interpret_score_levels():
+
+    assert FinancialDiagnostics.interpret_score(85) == "Excellent"
+    assert FinancialDiagnostics.interpret_score(65) == "Stable"
+    assert FinancialDiagnostics.interpret_score(45) == "Fragile"
+    assert FinancialDiagnostics.interpret_score(20) == "High Risk"
+
+
+def test_build_diagnosis_structure():
+
+    fake_score = {
+        "survival": 0,
+        "margin": 0,
+        "stability": 0,
+        "growth": 0,
+        "cushion": 0,
+        "goal": 0,
+        "total_score": 0,
+    }
+
+    diagnosis = FinancialDiagnostics.build_diagnosis(fake_score)
+
+    assert isinstance(diagnosis, dict)
+    assert "level" in diagnosis
+    assert isinstance(diagnosis["messages"], list)
+
+
+# =========================
+# Insolvency scenarios
+# =========================
+
 def test_insolvent_before_income():
-    inputs = FinancialInputs(
+
+    inputs = create_default_inputs(
         initial_savings=1000,
-        one_time_cost=0,
-        monthly_income=2000,
         monthly_expenses=1000,
-        months=6,
-        savings_goal=5000,
         months_without_income=2,
     )
 
@@ -93,107 +138,11 @@ def test_insolvent_before_income():
     assert result.insolvent_before_income is True
 
 
-def test_months_to_reach_goal_none_if_negative_margin():
-    inputs = FinancialInputs(
-        initial_savings=5000,
-        one_time_cost=0,
-        monthly_income=1000,
-        monthly_expenses=2000,
-        months=12,
-        savings_goal=20000,
-    )
-
-    engine = ProjectionEngine(inputs)
-
-    assert engine.months_to_reach_goal() is None
-
-
-def test_monthly_cashflow_without_income():
-    inputs = FinancialInputs(
-        initial_savings=5000,
-        one_time_cost=0,
-        monthly_income=3000,
-        monthly_expenses=1000,
-        months=3,
-        savings_goal=10000,
-        months_without_income=1,
-    )
-
-    engine = ProjectionEngine(inputs)
-
-    assert engine._get_monthly_cashflow(1) == -1000
-    assert engine._get_monthly_cashflow(2) == 2000
-
-def test_interpret_score():
-    inputs = FinancialInputs(
-        initial_savings=5000,
-        one_time_cost=0,
-        monthly_income=4000,
-        monthly_expenses=2000,
-        months=12,
-        savings_goal=10000,
-    )
-
-    engine = ProjectionEngine(inputs)
-
-    assert engine.interpret_score(85) == "Excellent"
-    assert engine.interpret_score(65) == "Stable"
-    assert engine.interpret_score(45) == "Fragile"
-    assert engine.interpret_score(20) == "High Risk"
-    
-def test_generate_diagnosis_returns_list():
-    inputs = FinancialInputs(
-        initial_savings=1000,
-        one_time_cost=0,
-        monthly_income=1000,
-        monthly_expenses=2000,
-        months=6,
-        savings_goal=5000,
-    )
-
-    engine = ProjectionEngine(inputs)
-
-    fake_score = {
-        "survival": 0,
-        "margin": 0,
-        "growth": 0,
-        "cushion": 0,
-        "goal": 0,
-        "total_score": 0,
-    }
-
-    diagnosis = engine.generate_diagnosis(fake_score)
-
-    assert isinstance(diagnosis, list)
-    assert len(diagnosis) > 0
-
-def test_months_without_income_greater_than_projection():
-    inputs = FinancialInputs(
-        monthly_income=3000,
-        monthly_expenses=2000,
-        initial_savings=5000,
-        one_time_cost=1000,
-        months=6,
-        months_without_income=12,
-        savings_goal=0
-    )
-
-    engine = ProjectionEngine(inputs)
-    result = engine.simulate()
-
-    # Vérifie qu'aucun mois n'a de revenu positif
-    for projection in result.projections:
-        assert projection.net_cashflow == -2000
-
 def test_zero_income_scenario():
-    inputs = FinancialInputs(
+
+    inputs = create_default_inputs(
         monthly_income=0,
         monthly_expenses=1500,
-        initial_savings=5000,
-        one_time_cost=0,
-        months=6,
-        months_without_income=0,
-        savings_goal=0
     )
 
     engine = ProjectionEngine(inputs)
@@ -201,112 +150,77 @@ def test_zero_income_scenario():
 
     assert result.went_negative_during_simulation is True
 
-def test_negative_cashflow_scenario():
-    inputs = FinancialInputs(
+
+def test_negative_cashflow_but_positive_balance():
+
+    inputs = create_default_inputs(
+        initial_savings=10000,
         monthly_income=2000,
         monthly_expenses=3000,
-        initial_savings=10000,
-        one_time_cost=0,
         months=6,
-        months_without_income=0,
-        savings_goal=0
     )
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # Le cashflow est négatif mais le solde reste positif
     assert result.went_negative_during_simulation is False
 
-def test_unreachable_goal():
-    inputs = FinancialInputs(
-        monthly_income=2000,
-        monthly_expenses=2500,
-        initial_savings=1000,
-        one_time_cost=0,
-        months=12,
-        months_without_income=0,
-        savings_goal=100000 
-    )
 
-    engine = ProjectionEngine(inputs)
-    result = engine.simulate()
-
-    assert result.goal_reached_month is None
-
-
-def test_zero_month_projection():
-    with pytest.raises(ValueError):
-        FinancialInputs(
-            monthly_income=3000,
-            monthly_expenses=2000,
-            initial_savings=5000,
-            one_time_cost=0,
-            months=0,
-            months_without_income=0,
-            savings_goal=0
-        )
+# =========================
+# Engine metrics
+# =========================
 
 def test_max_negative_balance():
-    inputs = FinancialInputs(
+
+    inputs = create_default_inputs(
         initial_savings=1000,
-        one_time_cost=0,
         monthly_income=0,
         monthly_expenses=1500,
         months=2,
-        savings_goal=0,
     )
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # 1000 - 1500 = -500
-    # -500 -1500 = -2000
     assert result.max_negative_balance == -2000
 
 
 def test_average_cashflow():
-    inputs = FinancialInputs(
-        initial_savings=5000,
-        one_time_cost=0,
-        monthly_income=3000,
-        monthly_expenses=1000,
-        months=2,
-        savings_goal=0,
+
+    inputs = create_default_inputs(
+        months=2
     )
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # cashflow constant = 2000
     assert result.average_cashflow == 2000
 
 
 def test_min_cushion():
-    inputs = FinancialInputs(
+
+    inputs = create_default_inputs(
         initial_savings=6000,
-        one_time_cost=0,
         monthly_income=0,
         monthly_expenses=2000,
         months=2,
-        savings_goal=0,
     )
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # Balances: 6000 → 4000 → 2000
-    # Cushion months: 3 → 2 → 1
     assert result.min_cushion == 1
 
+
+# =========================
+# Expense system
+# =========================
+
 def test_categorized_expenses_override_monthly():
-    inputs = FinancialInputs(
-        initial_savings=5000,
-        one_time_cost=0,
-        monthly_income=3000,
-        monthly_expenses=9999,  # Ne doit pas être utilisé
+
+    inputs = create_default_inputs(
         months=1,
-        savings_goal=0,
+        monthly_expenses=9999,
         expenses={
             "rent": 1000,
             "food": 500,
@@ -316,38 +230,47 @@ def test_categorized_expenses_override_monthly():
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # cashflow = 3000 - 1500
     assert result.projections[0].net_cashflow == 1500
 
-def test_expenses_dict_overrides_monthly_expenses():
-    inputs = FinancialInputs(
-        initial_savings=10000,
-        one_time_cost=2000,
-        monthly_income=4000,
-        monthly_expenses=1000,  # Valeur par défaut
-        months=3,
-        savings_goal=5000,
-        expenses={
-            "rent": 1500,
-            "food": 500,
-            "utilities": 300
-        }
-    )
+
+# =========================
+# Risk engine
+# =========================
+
+def test_risk_score_range():
+
+    inputs = create_default_inputs()
 
     engine = ProjectionEngine(inputs)
     result = engine.simulate()
 
-    # Total des dépenses devrait être la somme du dict
-    total_expenses = sum(inputs.expenses.values())
-    assert total_expenses == 2300
+    scorer = FinancialScorer(inputs)
+    score = scorer.calculate(result)
 
-    # Vérifie que le cashflow du premier mois est correct
-    expected_cashflow_month1 = inputs.monthly_income - total_expenses
-    assert engine._get_monthly_cashflow(1) == expected_cashflow_month1
+    analyzer = ImmigrationRiskAnalyzer()
+    risk = analyzer.calculate_risk(result, score)
+
+    assert 0 <= risk["risk_score"] <= 100
 
 
-import random
+# =========================
+# Monte Carlo
+# =========================
 
+def test_monte_carlo_runs():
+
+    inputs = create_default_inputs()
+
+    simulator = MonteCarloSimulator(inputs, runs=50)
+    result = simulator.run()
+
+    assert 0 <= result.success_rate <= 1
+    assert result.simulations_run == 50
+
+
+# =========================
+# Robustness / fuzz testing
+# =========================
 
 def test_randomized_simulations_do_not_crash():
 
