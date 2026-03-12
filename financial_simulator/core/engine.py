@@ -1,7 +1,7 @@
 # financial_simulator/core/engine.py
 
 from math import ceil
-from financial_simulator.scenarios.canada import get_province_data
+from financial_simulator.data.provinces import get_province as get_province_data
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.models import MonthlyProjection, ProjectionResult
 

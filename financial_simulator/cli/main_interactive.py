@@ -1,91 +1,88 @@
 # financial_simulator/cli/main_interactive.py
-from financial_simulator.core.inputs import FinancialInputs
-from financial_simulator.core.engine import ProjectionEngine
-from financial_simulator.analysis.scoring import FinancialScorer
-from financial_simulator.core.hints import FIELD_HINTS
-from financial_simulator.analysis.diagnostics import FinancialDiagnostics
 
-def print_hint(field_name):
-    hint = FIELD_HINTS.get(field_name)
+from financial_simulator.core.inputs import FinancialInputs
+from financial_simulator.core.simulation_pipeline import SimulationPipeline
+from financial_simulator.core.hints import FIELD_HINTS
+
+
+def print_hint(field):
+    hint = FIELD_HINTS.get(field)
     if hint:
-        print(f"💡 Hint: {hint}")
+        print(f"💡 {hint}")
+
+
+def ask_float(label, field):
+    print_hint(field)
+    return float(input(label))
+
+
+def ask_int(label, field):
+    print_hint(field)
+    return int(input(label))
+
 
 def main():
-    print("Bienvenue dans la CLI Interactive\n")
 
-    print_hint("initial_savings")
-    initial_savings = float(input("Initial savings: "))
+    print("\n🇨🇦 Canada Financial Engine — Interactive CLI\n")
 
-    print_hint("one_time_cost")
-    one_time_cost = float(input("One-time cost: "))
+    initial_savings = ask_float("Initial savings: ", "initial_savings")
+    one_time_cost = ask_float("One-time migration cost: ", "one_time_cost")
 
-    print_hint("months_without_income")
-    months_without_income = int(input("Months without income: "))
+    months_without_income = ask_int(
+        "Months without income: ",
+        "months_without_income"
+    )
 
-    print_hint("monthly_income")
-    monthly_income = float(input("Monthly income: "))
+    monthly_income = ask_float("Expected monthly income: ", "monthly_income")
 
-    print_hint("monthly_expenses")
-    monthly_expenses = float(input("Monthly expenses: "))
+    monthly_expenses = ask_float("Monthly expenses: ", "monthly_expenses")
 
-    print_hint("savings_goal")
-    savings_goal = float(input("Savings goal: "))
+    savings_goal = ask_float("Savings goal: ", "savings_goal")
 
     inputs = FinancialInputs(
         initial_savings=initial_savings,
         one_time_cost=one_time_cost,
         monthly_income=monthly_income,
         monthly_expenses=monthly_expenses,
-        months=12,  
+        months=12,
         savings_goal=savings_goal,
         months_without_income=months_without_income,
     )
 
-    print("\n✨ Inputs successfully created!")
-    print(vars(inputs))
+    pipeline = SimulationPipeline()
 
-    engine = ProjectionEngine(inputs)
-    result = engine.simulate()
+    print("\n⚙️ Running simulation...\n")
 
-    if result.insolvent_before_income:
-        print("\n⚠️ Attention : fonds insuffisants pour survivre les mois sans revenu.")
-        choice = input("Voulez-vous continuer la simulation quand même ? (y/n): ")
-        if choice.lower() == "y":
-            result = engine.simulate(force=True)
-        else:
-            print("Simulation stoppée.")
-            return
+    output = pipeline.run(inputs)
 
-    print("\n--- Résumé de la simulation ---")
-    print(f"Final balance: {result.final_balance}")
-    print(f"Goal reached at month: {result.goal_reached_month}")
-    print(f"Went negative: {result.went_negative_during_simulation}")
-    print(f"Insolvent before income: {result.insolvent_before_income}")
+    projection = output["projection"]
+    score = output["score"]
+    risk = output["risk"]
+    insights = output["insights"]
 
-    scorer = FinancialScorer(inputs)
-    score = scorer.calculate(result)
+    print("\n📊 SIMULATION RESULT\n")
 
-    print("\n--- Financial Health Score ---")
-    print(f"Total Score: {score['total_score']} / 100")
-    print(f"Survival: {score['survival']} / 25")
-    print(f"Margin: {score['margin']} / 20")
-    print(f"Stability: {score['stability']} / 15")
-    print(f"Growth: {score['growth']} / 15")
-    print(f"Cushion: {score['cushion']} / 15")
-    print(f"Goal: {score['goal']} / 10")
+    print(f"Final balance: {projection.final_balance:.2f} CAD")
+    print(f"Max negative balance: {projection.max_negative_balance:.2f} CAD")
+    print(f"Average monthly cashflow: {projection.average_cashflow:.2f} CAD")
 
-    diagnosis = FinancialDiagnostics.build_diagnosis(score)
+    print("\n🧠 FINANCIAL HEALTH")
 
-    level = diagnosis["level"]
-    messages = diagnosis["messages"]
+    print(f"Score: {score['total_score']}/100")
+    print(f"Interpretation: {score['interpretation']}")
 
-    print(f"\nFinancial Level: {level}")
+    print("\n⚠️ RISK ANALYSIS")
 
-    print("\nDiagnosis:")
-    for msg in messages:
-        print("-", msg)
+    print(f"Risk score: {risk['risk_score']}/100")
+    print(f"Risk level: {risk['risk_level']}")
 
-    print("\nsimulation terminée avec succès !")
+    print("\n💡 INSIGHTS")
+
+    for insight in insights:
+        print(f"- {insight}")
+
+    print("\n✅ Simulation completed.\n")
+
 
 if __name__ == "__main__":
     main()

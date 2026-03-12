@@ -20,3 +20,24 @@ FIELD_HINTS = {
     "savings_goal":
     "🎯 A good goal is saving at least 3–6 months of expenses as financial cushion."
 }
+
+EXPENSE_HINTS = {
+
+"driver_license":
+"Driving license conversion can cost 300–800 CAD depending on province",
+
+"winter_clothes":
+"Winter clothes can cost 300–700 CAD first year",
+
+"phone_plan":
+"Typical phone plans range 40–80 CAD/month",
+
+"transport":
+"Public transport averages 80–150 CAD/month",
+
+"furniture":
+"Basic furniture setup can cost 500–2000 CAD",
+
+"health_insurance":
+"Private insurance may be required first months"
+}

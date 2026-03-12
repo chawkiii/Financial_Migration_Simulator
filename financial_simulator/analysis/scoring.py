@@ -39,7 +39,8 @@ class FinancialScorer:
         # =============================
         # 2️⃣ Margin (20)
         # =============================
-        margin = self.inputs.monthly_income - total_expenses
+        net_income = self.inputs.monthly_income * (1 - self.inputs.tax_rate)
+        margin = net_income - total_expenses
 
         if margin >= 1000:
             margin_points = 20
@@ -113,8 +114,11 @@ class FinancialScorer:
 
         score = max(0, min(score, 100))
 
+        interpretation = self.interpret_score(score)
+
         return {
             "total_score": score,
+            "interpretation": interpretation,
             "survival": survival_points,
             "margin": margin_points,
             "stability": stability_points,
@@ -122,3 +126,19 @@ class FinancialScorer:
             "cushion": cushion_points,
             "goal": goal_points,
         }
+    
+    def interpret_score(self, score):
+
+        if score >= 80:
+            return "Excellent financial stability"
+
+        if score >= 65:
+            return "Good stability"
+
+        if score >= 50:
+            return "Moderate risk"
+
+        if score >= 35:
+            return "High risk"
+
+        return "Critical financial risk"
