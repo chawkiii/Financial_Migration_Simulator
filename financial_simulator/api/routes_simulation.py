@@ -32,8 +32,18 @@ def run_simulation(data: SimulationInput):
             "simulation": {
 
                 "final_balance": round(result.final_balance, 2),
+
                 "goal_reached_month": result.goal_reached_month,
+
                 "went_negative": result.went_negative_during_simulation,
+
+                "insolvent_before_income": result.insolvent_before_income,
+
+                "max_negative_balance": round(result.max_negative_balance, 2),
+
+                "average_cashflow": round(result.average_cashflow, 2),
+
+                "min_cushion": round(result.min_cushion, 2),
 
                 "monthly_projections": [
                     {
@@ -45,6 +55,7 @@ def run_simulation(data: SimulationInput):
                     for p in result.projections
                 ]
             },
+
 
             "analysis": {
 
