@@ -5,6 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from financial_simulator.api.routes_simulation import router as simulation_router
 
+from financial_simulator.database.base import Base
+from financial_simulator.database.session import engine
+
+# Crée les tables
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="Canada Financial Engine API",
     version="0.3.0"
@@ -24,7 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/")
 def root():
     return {
@@ -32,10 +37,8 @@ def root():
         "version": "0.3.0"
     }
 
-
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
 
 app.include_router(simulation_router)

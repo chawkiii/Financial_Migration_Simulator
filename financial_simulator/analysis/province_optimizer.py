@@ -9,6 +9,12 @@ from financial_simulator.core.inputs import FinancialInputs
 
 class ProvinceOptimizer:
 
+    def __init__(self):
+
+        self.engine_class = ProjectionEngine
+        self.scorer = FinancialScorer
+        self.risk_analyzer = ImmigrationRiskAnalyzer()
+
     def rank_provinces(self, base_inputs):
 
         rankings = []
@@ -21,30 +27,18 @@ class ProvinceOptimizer:
             )
 
             inputs = FinancialInputs(
-                initial_savings=base_inputs.initial_savings,
-                one_time_cost=base_inputs.one_time_cost,
-                monthly_income=base_inputs.monthly_income,
-                monthly_expenses=adjusted_expenses,
-                months=base_inputs.months,
-                savings_goal=base_inputs.savings_goal,
-                months_without_income=base_inputs.months_without_income,
+                **base_inputs.model_dump(),
+                monthly_expenses=adjusted_expenses
             )
 
-            engine = ProjectionEngine(inputs)
-            result = engine.simulate(force=True)
-
-            scorer = FinancialScorer(inputs)
-            score = scorer.calculate(result)
-
-            risk_analyzer = ImmigrationRiskAnalyzer()
-            risk = risk_analyzer.calculate_risk(result, score)
+            result = self._evaluate(inputs)
 
             rankings.append({
                 "province": province,
-                "score": score["total_score"],
-                "risk_score": risk["risk_score"],
-                "risk_level": risk["risk_level"],
-                "final_balance": result.final_balance
+                "score": result["score"],
+                "risk_score": result["risk_score"],
+                "risk_level": result["risk_level"],
+                "final_balance": result["final_balance"]
             })
 
         rankings.sort(
@@ -53,3 +47,20 @@ class ProvinceOptimizer:
         )
 
         return rankings
+
+
+    def _evaluate(self, inputs):
+
+        engine = self.engine_class(inputs)
+        result = engine.simulate(force=True)
+
+        score = self.scorer(inputs).calculate(result)
+
+        risk = self.risk_analyzer.calculate_risk(result, score)
+
+        return {
+            "score": score["total_score"],
+            "risk_score": risk["risk_score"],
+            "risk_level": risk["risk_level"],
+            "final_balance": result.final_balance
+        }

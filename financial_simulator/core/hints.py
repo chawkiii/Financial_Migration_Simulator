@@ -3,41 +3,45 @@
 FIELD_HINTS = {
 
     "initial_savings":
-    "💰 Recommended: 8,000–12,000 CAD to safely cover relocation and initial months.",
+    "💰 Savings available before arriving in Canada. Recommended: at least 8,000–15,000 CAD to cover relocation and the first months.",
 
     "one_time_cost":
-    "✈️ Includes flights, housing deposit, initial furniture, and admin costs.",
+    "✈️ One-time immigration costs such as flights, temporary housing deposit, furniture, and administrative fees.",
 
     "months_without_income":
-    "⏳ Most newcomers find survival jobs within 1–2 months.",
+    "⏳ Number of months expected before finding a job. Many newcomers take 1–3 months depending on preparation and province.",
 
     "monthly_income":
-    "💼 Typical survival income: 1,800–2,800 CAD/month depending on job and province.",
+    "💼 Estimated gross monthly income after finding a job. Taxes will automatically be applied based on the selected province.",
 
     "monthly_expenses":
-    "🏠 Average expenses range between 1,800–2,500 CAD depending on city and lifestyle.",
+    "🏠 Your expected monthly living expenses. The simulator will adjust this value based on the province cost-of-living index.",
 
     "savings_goal":
-    "🎯 A good goal is saving at least 3–6 months of expenses as financial cushion."
+    "🎯 Financial safety goal you want to reach during the simulation (for example 3–6 months of expenses).",
+
+    "province":
+    "🗺 Province affects taxes and cost of living. This does NOT override your inputs but adjusts the simulation environment."
 }
+
 
 EXPENSE_HINTS = {
 
-"driver_license":
-"Driving license conversion can cost 300–800 CAD depending on province",
+    "driver_license":
+    "Driving license conversion can cost 300–800 CAD depending on province.",
 
-"winter_clothes":
-"Winter clothes can cost 300–700 CAD first year",
+    "winter_clothes":
+    "Winter clothing for the first year can cost 300–700 CAD.",
 
-"phone_plan":
-"Typical phone plans range 40–80 CAD/month",
+    "phone_plan":
+    "Typical mobile plans range between 40–80 CAD per month.",
 
-"transport":
-"Public transport averages 80–150 CAD/month",
+    "transport":
+    "Public transport averages 80–150 CAD/month depending on city.",
 
-"furniture":
-"Basic furniture setup can cost 500–2000 CAD",
+    "furniture":
+    "Basic furniture setup may cost 500–2000 CAD initially.",
 
-"health_insurance":
-"Private insurance may be required first months"
+    "health_insurance":
+    "Private insurance may be required during the first months before provincial coverage."
 }

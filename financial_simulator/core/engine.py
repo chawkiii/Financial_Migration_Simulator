@@ -1,7 +1,6 @@
 # financial_simulator/core/engine.py
 
 from math import ceil
-from financial_simulator.data.provinces import get_province as get_province_data
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.models import MonthlyProjection, ProjectionResult
 
@@ -9,8 +8,10 @@ from financial_simulator.core.models import MonthlyProjection, ProjectionResult
 class ProjectionEngine:
     def __init__(self, financial_inputs: FinancialInputs):
         self.inputs = financial_inputs
-        self.total_expenses = self.inputs.get_total_expenses()
-
+        self.total_expenses = (
+            self.inputs.get_total_expenses() *
+            getattr(self.inputs, "cost_of_living_index", 1.0)
+        )
     # =============================
     # Core Helpers
     # =============================
@@ -120,7 +121,9 @@ class ProjectionEngine:
         if balance >= self.inputs.savings_goal:
             return 0
 
-        net_cashflow = self.inputs.monthly_income - self.total_expenses
+        net_income = self.inputs.monthly_income * (1 - self.inputs.tax_rate)
+
+        net_cashflow = net_income - self.total_expenses
 
         if net_cashflow <= 0:
             return None

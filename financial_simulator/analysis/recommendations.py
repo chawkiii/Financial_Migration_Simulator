@@ -16,7 +16,7 @@ class FinancialRecommendations:
                 "Reduce monthly expenses or increase income."
             )
 
-        if result.min_cushion < 2:
+        if result.min_cushion < 3:
             recommendations.append(
                 "Build a stronger emergency fund before migrating."
             )

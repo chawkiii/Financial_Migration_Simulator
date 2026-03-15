@@ -5,6 +5,8 @@ import SimulationForm from "../components/SimulationForm";
 import ResultsPanel from "../components/ResultsPanel";
 import ProjectionChart from "../components/ProjectionChart";
 import { runSimulation } from "../services/api";
+import ScenarioComparison from "../components/ScenarioComparison";
+import SimulationHistory from "../components/SimulationHistory";
 
 export default function SimulatorPage() {
   const [result, setResult] = useState(null);
@@ -25,17 +27,23 @@ export default function SimulatorPage() {
 
   return (
     <div className="container">
+
       <h1>Canada Financial Engine</h1>
 
       <SimulationForm onRun={handleRun} />
+
       {loading && <p>Running simulation...</p>}
 
       {result && (
         <>
           <ResultsPanel result={result} />
           <ProjectionChart projections={result.simulation.monthly_projections} />
+          <ScenarioComparison baseInput={result.input}/>
         </>
       )}
-    </div>
+
+      <SimulationHistory />
+
+      </div>
   );
 }

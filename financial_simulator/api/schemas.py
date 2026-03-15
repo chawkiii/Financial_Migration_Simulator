@@ -12,6 +12,8 @@ class SimulationInput(BaseModel):
     months: int
     savings_goal: float
     months_without_income: int = 0
+
+    province: Optional[str] = None
     expenses: Optional[Dict[str, float]] = None
 
 
@@ -26,6 +28,10 @@ class SimulationResult(BaseModel):
     final_balance: float
     goal_reached_month: int | None
     went_negative: bool
+    insolvent_before_income: bool
+    max_negative_balance: float
+    average_cashflow: float
+    min_cushion: float
     monthly_projections: List[MonthlyProjection]
 
 
@@ -39,3 +45,18 @@ class SimulationResponse(BaseModel):
     simulation: SimulationResult
     analysis: AnalysisResult
     risk: dict
+    monte_carlo: dict
+    success_probability: dict
+    strategy: list
+
+
+class ScenarioComparisonRequest(BaseModel):
+    scenarios: List[SimulationInput]
+
+
+class ScenarioComparisonResult(BaseModel):
+    name: str
+    final_balance: float
+    financial_score: float
+    success_probability: float
+    risk_level: str

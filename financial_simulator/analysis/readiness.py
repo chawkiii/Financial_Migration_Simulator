@@ -10,7 +10,7 @@ class MigrationReadinessIndex:
         readiness += score["total_score"] * 0.4
 
         # Cushion (20%)
-        cushion_score = min(result.min_cushion * 10, 100)
+        cushion_score = min(max(result.min_cushion * 10, 0), 100)
         readiness += cushion_score * 0.2
 
         # Risk (20%) (inversé)

@@ -10,3 +10,5 @@ export const runSimulation = async (data) => {
   const response = await api.post("/simulate", data);
   return response.data;
 };
+
+export default api;

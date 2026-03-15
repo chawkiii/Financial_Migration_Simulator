@@ -7,7 +7,7 @@ class ImmigrationSuccessPredictor:
         monte_success = monte_carlo.success_rate * 100
         financial_score = score["total_score"]
 
-        cushion_factor = min(result.min_cushion / 6, 1)
+        cushion_factor = max(0, min(result.min_cushion / 6, 1))
         cushion_score = cushion_factor * 100
 
         risk_factor = 1 - (risk["risk_score"] / 100)
