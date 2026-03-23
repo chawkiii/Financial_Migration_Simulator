@@ -2,8 +2,10 @@
 
 import random
 from dataclasses import dataclass
-from financial_simulator.core.engine import ProjectionEngine
-from financial_simulator.core.inputs import FinancialInputs
+from copy import deepcopy
+
+from financial_simulator.core.projection import run_projection
+from financial_simulator.core.inputs.simulation_inputs import SimulationInputs
 
 
 @dataclass
@@ -19,8 +21,8 @@ class MonteCarloSimulator:
 
     def __init__(
         self,
-        inputs: FinancialInputs,
-        runs: int = 500,
+        inputs: SimulationInputs,
+        runs: int = 200,
         income_volatility: float = 0.15,
         expense_volatility: float = 0.10,
     ):
@@ -29,7 +31,9 @@ class MonteCarloSimulator:
         self.income_volatility = income_volatility
         self.expense_volatility = expense_volatility
 
-    def _randomize_inputs(self) -> FinancialInputs:
+    def _randomize_inputs(self) -> SimulationInputs:
+
+        new_inputs = deepcopy(self.inputs)
 
         income_variation = random.uniform(
             -self.income_volatility,
@@ -41,16 +45,17 @@ class MonteCarloSimulator:
             self.expense_volatility
         )
 
-        return FinancialInputs(
-            initial_savings=self.inputs.initial_savings,
-            one_time_cost=self.inputs.one_time_cost,
-            monthly_income=self.inputs.monthly_income * (1 + income_variation),
-            monthly_expenses=self.inputs.monthly_expenses * (1 + expense_variation),
-            months=self.inputs.months,
-            savings_goal=self.inputs.savings_goal,
-            months_without_income=self.inputs.months_without_income,
-            expenses=self.inputs.expenses
-        )
+        # ✅ cohérent avec ton architecture
+        new_inputs.monthly_income *= (1 + income_variation)
+
+        if new_inputs.monthly_expenses:
+            new_inputs.monthly_expenses *= (1 + expense_variation)
+
+        if new_inputs.expenses:
+            for k in new_inputs.expenses:
+                new_inputs.expenses[k] *= (1 + expense_variation)
+
+        return new_inputs
 
     def run(self) -> MonteCarloResult:
 
@@ -62,19 +67,18 @@ class MonteCarloSimulator:
 
             randomized_inputs = self._randomize_inputs()
 
-            engine = ProjectionEngine(randomized_inputs)
-            result = engine.simulate(force=True)
+            result, _ = run_projection(randomized_inputs)
 
-            final_balances.append(result.final_balance)
+            final_balance = result.final_balance
+            final_balances.append(final_balance)
 
-            worst_balance = min(worst_balance, result.final_balance)
+            worst_balance = min(worst_balance, final_balance)
 
-            if result.final_balance >= randomized_inputs.savings_goal:
+            if final_balance >= randomized_inputs.savings_goal:
                 successes += 1
 
         success_rate = successes / self.runs
         failure_rate = 1 - success_rate
-
         average_final = sum(final_balances) / len(final_balances)
 
         return MonteCarloResult(

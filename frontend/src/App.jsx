@@ -1,9 +1,14 @@
 // frontend/src/App.jsx
 
-import SimulatorPage from "./pages/SimulatorPage";
+import { SimulationProvider } from "./context/SimulationContext.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 
 function App() {
-  return <SimulatorPage />;
+  return (
+    <SimulationProvider>
+      <Dashboard />
+    </SimulationProvider>
+  );
 }
 
 export default App;

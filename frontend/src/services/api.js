@@ -7,8 +7,13 @@ const api = axios.create({
 });
 
 export const runSimulation = async (data) => {
-  const response = await api.post("/simulate", data);
-  return response.data;
+  try {
+    const response = await api.post("/simulate", data);
+    return response.data;
+  } catch (err) {
+    console.error("Simulation API error:", err);
+    throw err;
+  }
 };
 
 export default api;

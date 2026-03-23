@@ -24,6 +24,13 @@ def create_default_inputs(**overrides):
     base.update(overrides)
     return FinancialInputs(**base)
 
+def test_zero_expenses():
+    inputs = create_default_inputs(monthly_expenses=0)
+    engine = ProjectionEngine(inputs)
+    result = engine.simulate()
+
+    assert result.min_cushion == 0
+
 
 # =========================
 # Projection core
@@ -290,3 +297,4 @@ def test_randomized_simulations_do_not_crash():
         result = engine.simulate(force=True)
 
         assert result.final_balance is not None
+        assert isinstance(result.final_balance, (int, float))

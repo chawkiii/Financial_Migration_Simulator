@@ -2,21 +2,13 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from financial_simulator.api.routes_simulation import router as simulation_router
-
-from financial_simulator.database.base import Base
-from financial_simulator.database.session import engine
-
-# Crée les tables
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Canada Financial Engine API",
-    version="0.3.0"
+    version="1.0.0"
 )
 
-# CORS configuration (allow React frontend)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -32,13 +24,10 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {
-        "service": "Canada Financial Engine",
-        "version": "0.3.0"
-    }
+    return {"service": "Canada Financial Engine"}
 
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "ok"}
 
 app.include_router(simulation_router)

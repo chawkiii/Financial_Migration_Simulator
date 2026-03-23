@@ -1,62 +1,30 @@
 # financial_simulator/api/schemas.py
 
-from pydantic import BaseModel
-from typing import Dict, Optional, List
+from pydantic import BaseModel, model_validator
+from typing import Optional, Dict
 
 
-class SimulationInput(BaseModel):
+class SimulationRequest(BaseModel):
     initial_savings: float
-    one_time_cost: float
     monthly_income: float
-    monthly_expenses: float
-    months: int
-    savings_goal: float
-    months_without_income: int = 0
 
-    province: Optional[str] = None
+    monthly_expenses: Optional[float] = None
     expenses: Optional[Dict[str, float]] = None
 
+    months: int
+    savings_goal: float
+    one_time_cost: float = 0
+    months_without_income: int = 0
 
-class MonthlyProjection(BaseModel):
-    month: int
-    start: float
-    end: float
-    cashflow: float
+    province: str
 
+    # ✅ VALIDATION API LEVEL
+    @model_validator(mode="after")
+    def validate_expenses(self):
+        if self.monthly_expenses is None and self.expenses is None:
+            raise ValueError("Provide either monthly_expenses or expenses")
 
-class SimulationResult(BaseModel):
-    final_balance: float
-    goal_reached_month: int | None
-    went_negative: bool
-    insolvent_before_income: bool
-    max_negative_balance: float
-    average_cashflow: float
-    min_cushion: float
-    monthly_projections: List[MonthlyProjection]
+        if self.monthly_expenses is not None and self.expenses is not None:
+            raise ValueError("Provide either monthly_expenses OR expenses, not both")
 
-
-class AnalysisResult(BaseModel):
-    financial_score: float
-    interpretation: str
-    insights: list
-
-
-class SimulationResponse(BaseModel):
-    simulation: SimulationResult
-    analysis: AnalysisResult
-    risk: dict
-    monte_carlo: dict
-    success_probability: dict
-    strategy: list
-
-
-class ScenarioComparisonRequest(BaseModel):
-    scenarios: List[SimulationInput]
-
-
-class ScenarioComparisonResult(BaseModel):
-    name: str
-    final_balance: float
-    financial_score: float
-    success_probability: float
-    risk_level: str
+        return self

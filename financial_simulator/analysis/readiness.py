@@ -1,27 +1,27 @@
 # financial_simulator/analysis/readiness.py
 
 class MigrationReadinessIndex:
+    """Calculates an overall readiness index for immigration based on financial, risk, and Monte Carlo results."""
 
-    def calculate(self, result, score, risk, monte_carlo=None):
-
+    def calculate(self, result, score, risk, monte_carlo=None) -> dict:
         readiness = 0
 
-        # Score financier (40%)
-        readiness += score["total_score"] * 0.4
+        # Financial score weight: 40%
+        readiness += score.get("total_score", 0) * 0.4
 
-        # Cushion (20%)
-        cushion_score = min(max(result.min_cushion * 10, 0), 100)
+        # Cushion weight: 20%
+        cushion_score = min(result.min_cushion * 12, 100)
         readiness += cushion_score * 0.2
 
-        # Risk (20%) (inversé)
-        risk_score = 100 - risk["risk_score"]
+        # Risk weight: 20% (inverse)
+        risk_score = 100 - risk.get("risk_score", 0)
         readiness += risk_score * 0.2
 
-        # Monte Carlo (20%)
+        # Monte Carlo success weight: 20%
         if monte_carlo:
             readiness += monte_carlo.success_rate * 100 * 0.2
         else:
-            readiness += 50 * 0.2
+            readiness += 50 * 0.2  # Default neutral value
 
         readiness = min(readiness, 100)
 
@@ -30,15 +30,12 @@ class MigrationReadinessIndex:
             "level": self._interpret(readiness)
         }
 
-    def _interpret(self, score):
-
+    def _interpret(self, score: float) -> str:
         if score >= 80:
             return "Ready to immigrate"
-
-        if score >= 60:
+        elif score >= 60:
             return "Moderately ready"
-
-        if score >= 40:
+        elif score >= 40:
             return "Preparation needed"
-
-        return "High risk immigration attempt"
+        else:
+            return "High risk immigration attempt"

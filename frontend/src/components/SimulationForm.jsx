@@ -1,249 +1,104 @@
 // frontend/src/components/SimulationForm.jsx
 
 import { useState } from "react";
+import { useSimulation } from "../context/SimulationContext.jsx";
+import { runSimulation } from "../services/api.js";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-export default function SimulationForm({ onRun }) {
+function ScenarioSlider({ onChange }) {
+  return (
+    <div style={{ margin: "1rem 0" }}>
+      <label>Increase Income: </label>
+      <input type="range" min="0" max="50" step="1" onChange={(e) => onChange(Number(e.target.value))} />
+      <span> +<b id="slider-value">0</b>%</span>
+    </div>
+  );
+}
 
-  const [mode, setMode] = useState("simple");
-
-  const [form, setForm] = useState({
-    province: "ontario",
-    initial_savings: 11000,
-    one_time_cost: 3000,
-    monthly_income: 2600,
-    monthly_expenses: 2200,
-    months: 24,
-    savings_goal: 7000,
-    months_without_income: 3,
-    expenses: {
-      rent: 800,
-      food: 400,
-      transport: 150,
-      phone: 100
-    }
-  });
+export default function SimulationForm() {
+  const { inputs, updateInputs, result, setResult, loading, setLoading, resetSimulation } = useSimulation();
+  const [scenarioIncome, setScenarioIncome] = useState(0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setForm({
-      ...form,
-      [name]: name === "province" ? value : Number(value)
-    });
+    updateInputs({ [name]: Number(value) || value });
   };
 
-  const handleExpenseChange = (e) => {
-    const { name, value } = e.target;
-
-    setForm({
-      ...form,
-      expenses: {
-        ...form.expenses,
-        [name]: Number(value)
-      }
-    });
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const payload = { ...form };
-
-    if (mode === "simple") {
-      payload.expenses = null;
-    } else {
-      payload.monthly_expenses = 0;
+    setLoading(true);
+    try {
+      const data = { ...inputs, monthly_income: inputs.monthly_income * (1 + scenarioIncome / 100) };
+      const res = await runSimulation(data);
+      setResult(res);
+    } catch {
+      alert("Erreur lors de la simulation !");
+    } finally {
+      setLoading(false);
     }
-
-    onRun(payload);
   };
-
-  const Field = ({ label, hint, children }) => (
-    <div className="field">
-      <label>{label}</label>
-      <div className="field-row">
-        <div className="field-input">
-          {children}
-        </div>
-        {hint && (
-          <div className="field-hint">
-            {hint}
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
-    <form onSubmit={handleSubmit}>
-
-      <Field
-        label="Province"
-        hint="🗺 Taxes & cost of living depend on province."
-      >
-        <select
-          name="province"
-          value={form.province}
-          onChange={handleChange}
-        >
+    <div style={{ padding: "2rem", fontFamily: "Inter, sans-serif" }}>
+      <h1>Simulate your financial future</h1>
+      <form onSubmit={handleSubmit} style={{ marginBottom: "2rem" }}>
+        <label>Initial Savings:</label>
+        <input type="number" name="initial_savings" value={inputs.initial_savings} onChange={handleChange} />
+        <label>Monthly Income:</label>
+        <input type="number" name="monthly_income" value={inputs.monthly_income} onChange={handleChange} />
+        <label>Monthly Expenses:</label>
+        <input type="number" name="monthly_expenses" value={inputs.monthly_expenses} onChange={handleChange} />
+        <label>Province:</label>
+        <select name="province" value={inputs.province} onChange={handleChange}>
+          <option value="alberta">Alberta</option>
           <option value="ontario">Ontario</option>
           <option value="quebec">Quebec</option>
-          <option value="alberta">Alberta</option>
-          <option value="british_columbia">British Columbia</option>
         </select>
-      </Field>
 
-      <h3>Financial Inputs</h3>
+        <ScenarioSlider onChange={setScenarioIncome} />
 
-      <Field
-        label="Initial Savings"
-        hint="💰 Money available before arrival."
-      >
-        <input
-          type="number"
-          name="initial_savings"
-          value={form.initial_savings}
-          onChange={handleChange}
-        />
-      </Field>
+        <div style={{ marginTop: "1rem" }}>
+          <button type="submit" disabled={loading}>{loading ? "Running..." : "Run Simulation"}</button>
+          <button type="button" onClick={resetSimulation} style={{ marginLeft: "1rem" }}>Reset</button>
+        </div>
+      </form>
 
-      <Field
-        label="One-Time Cost"
-        hint="✈️ Flights, deposit, furniture, admin fees."
-      >
-        <input
-          type="number"
-          name="one_time_cost"
-          value={form.one_time_cost}
-          onChange={handleChange}
-        />
-      </Field>
+      {loading && <p>Running simulation… 🚀</p>}
 
-      <Field
-        label="Monthly Income"
-        hint="💼 Gross income (taxes applied automatically)."
-      >
-        <input
-          type="number"
-          name="monthly_income"
-          value={form.monthly_income}
-          onChange={handleChange}
-        />
-      </Field>
+      {result && (
+        <div style={{ marginTop: "2rem" }}>
+          <h2>Mini Dashboard</h2>
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
+            <div style={{ padding: "1rem", border: "1px solid #ccc" }}>
+              <strong>Final Balance</strong>
+              <p>${result.summary.final_balance?.toLocaleString() || 0}</p>
+            </div>
+            <div style={{ padding: "1rem", border: "1px solid #ccc" }}>
+              <strong>Cashflow</strong>
+              <p>${result.summary.monthly_cashflow?.toLocaleString() || 0}</p>
+            </div>
+            <div style={{ padding: "1rem", border: "1px solid #ccc" }}>
+              <strong>Taxes</strong>
+              <p>${result.tax?.total?.toLocaleString() || 0}</p>
+            </div>
+          </div>
 
-      <h3>Expenses Mode</h3>
-
-      <div className="radio-group">
-        <label>
-          <input
-            type="radio"
-            checked={mode === "simple"}
-            onChange={() => setMode("simple")}
-          />
-          Simple
-        </label>
-
-        <label>
-          <input
-            type="radio"
-            checked={mode === "detailed"}
-            onChange={() => setMode("detailed")}
-          />
-          Detailed
-        </label>
-      </div>
-
-      {mode === "simple" && (
-        <Field
-          label="Monthly Expenses"
-          hint="🏠 Total living expenses."
-        >
-          <input
-            type="number"
-            name="monthly_expenses"
-            value={form.monthly_expenses}
-            onChange={handleChange}
-          />
-        </Field>
+          {result.summary.monthly_balance && (
+            <div style={{ marginBottom: "2rem", height: "300px" }}>
+              <h3>Balance Over Time</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={result.summary.monthly_balance}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="balance" stroke="#4F46E5" activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
       )}
-
-      {mode === "detailed" && (
-        <>
-          <Field label="Rent" hint="🏠 Housing cost.">
-            <input
-              type="number"
-              name="rent"
-              value={form.expenses.rent}
-              onChange={handleExpenseChange}
-            />
-          </Field>
-
-          <Field label="Food">
-            <input
-              type="number"
-              name="food"
-              value={form.expenses.food}
-              onChange={handleExpenseChange}
-            />
-          </Field>
-
-          <Field label="Transport">
-            <input
-              type="number"
-              name="transport"
-              value={form.expenses.transport}
-              onChange={handleExpenseChange}
-            />
-          </Field>
-
-          <Field label="Phone">
-            <input
-              type="number"
-              name="phone"
-              value={form.expenses.phone}
-              onChange={handleExpenseChange}
-            />
-          </Field>
-        </>
-      )}
-
-      <Field label="Months to Simulate">
-        <input
-          type="number"
-          name="months"
-          value={form.months}
-          onChange={handleChange}
-        />
-      </Field>
-
-      <Field
-        label="Savings Goal"
-        hint="🎯 Recommended 3–6 months cushion."
-      >
-        <input
-          type="number"
-          name="savings_goal"
-          value={form.savings_goal}
-          onChange={handleChange}
-        />
-      </Field>
-
-      <Field
-        label="Months Without Income"
-        hint="⏳ Expected time before finding a job."
-      >
-        <input
-          type="number"
-          name="months_without_income"
-          value={form.months_without_income}
-          onChange={handleChange}
-        />
-      </Field>
-
-      <button type="submit">
-        Run Simulation
-      </button>
-
-    </form>
+    </div>
   );
 }

@@ -1,8 +1,8 @@
 # financial_simulator/database/models.py
 
-from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import Base
 
 
@@ -15,7 +15,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     simulations = relationship("Simulation", back_populates="user")
 
@@ -24,19 +24,22 @@ class Simulation(Base):
 
     __tablename__ = "simulations"
 
+    __table_args__ = (
+        UniqueConstraint('user_id', 'inputs_hash', name='unique_user_simulation'),
+    )
+
     id = Column(Integer, primary_key=True)
 
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    inputs_hash = Column(String, index=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     province = Column(String)
 
-    # Raw input/output JSON
     inputs = Column(JSON)
     results = Column(JSON)
 
-    # Normalized inputs (useful for analytics)
     initial_savings = Column(Float)
     one_time_cost = Column(Float)
     monthly_income = Column(Float)
@@ -51,7 +54,8 @@ class Simulation(Base):
     result = relationship(
         "SimulationResult",
         back_populates="simulation",
-        uselist=False
+        uselist=False,
+        cascade="all, delete-orphan"
     )
 
 
@@ -61,7 +65,7 @@ class SimulationResult(Base):
 
     id = Column(Integer, primary_key=True)
 
-    simulation_id = Column(Integer, ForeignKey("simulations.id"))
+    simulation_id = Column(Integer, ForeignKey("simulations.id"), nullable=False, unique=True)
 
     final_balance = Column(Float)
     financial_score = Column(Float)

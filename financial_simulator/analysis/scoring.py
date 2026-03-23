@@ -1,144 +1,150 @@
 # financial_simulator/analysis/scoring.py
+
 from financial_simulator.core.models import ProjectionResult
-from financial_simulator.core.inputs import FinancialInputs
+from financial_simulator.core.inputs.simulation_inputs import SimulationInputs
 
 
 class FinancialScorer:
-    def __init__(self, inputs: FinancialInputs):
-        self.inputs = inputs
 
+    def __init__(self, inputs: SimulationInputs, tax_summary: dict | None = None):
+        self.inputs = inputs
+        self.tax_summary = tax_summary or {}
+
+    # =============================
+    # MAIN ENTRY
+    # =============================
     def calculate(self, result: ProjectionResult) -> dict:
-        total_expenses = self.inputs.get_total_expenses()
-        initial_balance = self.inputs.initial_savings - self.inputs.one_time_cost
+
+        total_expenses = self.inputs.profile.get_total_expenses()
+        initial_balance = self.inputs.profile.initial_savings - self.inputs.config.one_time_cost
 
         score = 0
 
-        # =============================
-        # 1️⃣ Survival (25)
-        # =============================
-        if total_expenses == 0:
-            survival_points = 25
-        else:
-            survival_ratio = initial_balance / total_expenses
+        survival = self._score_survival(initial_balance, total_expenses, result)
+        margin = self._score_margin(total_expenses)
+        stability = self._score_stability(result)
+        goal = self._score_goal(result)
+        growth = self._score_growth(result, initial_balance)
+        cushion = self._score_cushion(result, total_expenses)
 
-            if initial_balance <= 0 or result.insolvent_before_income:
-                survival_points = 0
-            elif survival_ratio >= 6:
-                survival_points = 25
-            elif survival_ratio >= 4:
-                survival_points = 20
-            elif survival_ratio >= 2:
-                survival_points = 15
-            elif survival_ratio >= 1:
-                survival_points = 10
-            else:
-                survival_points = 5
-
-        score += survival_points
-
-        # =============================
-        # 2️⃣ Margin (20)
-        # =============================
-        net_income = self.inputs.monthly_income * (1 - self.inputs.tax_rate)
-        margin = net_income - total_expenses
-
-        if margin >= 1000:
-            margin_points = 20
-        elif margin >= 500:
-            margin_points = 15
-        elif margin >= 200:
-            margin_points = 10
-        elif margin > 0:
-            margin_points = 5
-        else:
-            margin_points = 0
-
-        score += margin_points
-
-        # =============================
-        # 3️⃣ Stability (15)
-        # =============================
-        if result.went_negative_during_simulation:
-            stability_points = 0
-        elif result.max_negative_balance < 0:
-            stability_points = 5
-        else:
-            stability_points = 15
-
-        score += stability_points
-
-        # =============================
-        # 4️⃣ Goal (10)
-        # =============================
-        if result.goal_reached_month is None:
-            goal_points = 0
-        else:
-            goal_points = 10
-
-        score += goal_points
-
-        # =============================
-        # 5️⃣ Growth (15)
-        # =============================
-        growth_amount = result.final_balance - initial_balance
-
-        if growth_amount >= self.inputs.savings_goal:
-            growth_points = 15
-        elif growth_amount >= self.inputs.savings_goal * 0.5:
-            growth_points = 10
-        elif growth_amount > 0:
-            growth_points = 5
-        else:
-            growth_points = 0
-
-        score += growth_points
-
-        # =============================
-        # 6️⃣ Cushion Final (15)
-        # =============================
-        if total_expenses == 0:
-            cushion_points = 15
-        else:
-            cushion_months = result.final_balance / total_expenses
-
-            if cushion_months >= 6:
-                cushion_points = 15
-            elif cushion_months >= 4:
-                cushion_points = 10
-            elif cushion_months >= 2:
-                cushion_points = 5
-            else:
-                cushion_points = 0
-
-        score += cushion_points
-
+        score = survival + margin + stability + goal + growth + cushion
         score = max(0, min(score, 100))
-
-        interpretation = self.interpret_score(score)
 
         return {
             "total_score": score,
-            "interpretation": interpretation,
-            "survival": survival_points,
-            "margin": margin_points,
-            "stability": stability_points,
-            "growth": growth_points,
-            "cushion": cushion_points,
-            "goal": goal_points,
+            "interpretation": self._interpret_score(score),
+            "survival": survival,
+            "margin": margin,
+            "stability": stability,
+            "growth": growth,
+            "cushion": cushion,
+            "goal": goal,
         }
-    
-    def interpret_score(self, score):
+
+    # =============================
+    # SCORING COMPONENTS
+    # =============================
+
+    def _score_survival(self, initial_balance, total_expenses, result):
+
+        if total_expenses == 0:
+            return 25
+
+        if initial_balance <= 0 or result.insolvent_before_income:
+            return 0
+
+        ratio = initial_balance / total_expenses
+
+        if ratio >= 6:
+            return 25
+        elif ratio >= 4:
+            return 20
+        elif ratio >= 2:
+            return 15
+        elif ratio >= 1:
+            return 10
+        else:
+            return 5
+
+    def _score_margin(self, total_expenses):
+
+        net_income = self._get_monthly_net_income()
+
+        margin = net_income - total_expenses
+
+        if margin >= 1000:
+            return 20
+        elif margin >= 500:
+            return 15
+        elif margin >= 200:
+            return 10
+        elif margin > 0:
+            return 5
+        else:
+            return 0
+
+    def _score_stability(self, result: ProjectionResult):
+
+        if result.went_negative_during_simulation:
+            return 0
+
+        if result.max_negative_balance < 0:
+            return 5
+
+        return 15
+
+    def _score_goal(self, result: ProjectionResult):
+        return 10 if result.goal_reached_month else 0
+
+    def _score_growth(self, result: ProjectionResult, initial_balance):
+
+        growth = result.final_balance - initial_balance
+        goal = self.inputs.config.savings_goal
+
+        if growth >= goal:
+            return 15
+        elif growth >= goal * 0.5:
+            return 10
+        elif growth > 0:
+            return 5
+        else:
+            return 0
+
+    def _score_cushion(self, result: ProjectionResult, total_expenses):
+
+        if total_expenses == 0:
+            return 15
+
+        cushion = result.final_balance / total_expenses
+
+        if cushion >= 6:
+            return 15
+        elif cushion >= 4:
+            return 10
+        elif cushion >= 2:
+            return 5
+        else:
+            return 0
+
+    # =============================
+    # HELPERS
+    # =============================
+
+    def _get_monthly_net_income(self):
+
+        if self.tax_summary and "net_income" in self.tax_summary:
+            return self.tax_summary["net_income"] / 12
+
+        return self.inputs.profile.monthly_income
+
+    def _interpret_score(self, score):
 
         if score >= 80:
             return "Excellent financial stability"
-
-        if score >= 65:
+        elif score >= 65:
             return "Good stability"
-
-        if score >= 50:
+        elif score >= 50:
             return "Moderate risk"
-
-        if score >= 35:
+        elif score >= 35:
             return "High risk"
-
         return "Critical financial risk"
