@@ -1,81 +1,98 @@
 # financial_simulator/core/simulation_pipeline.py
 
+from financial_simulator.core.projection import run_projection
+
 from financial_simulator.analysis.scoring import FinancialScorer
-from financial_simulator.analysis.insights import FinancialInsights
+from financial_simulator.analysis.diagnostics import FinancialDiagnostics
+from financial_simulator.analysis.recommendations import FinancialRecommendations
+from financial_simulator.analysis.readiness import MigrationReadinessIndex
 from financial_simulator.analysis.success_predictor import ImmigrationSuccessPredictor
 
 from financial_simulator.risk.immigration_risk import ImmigrationRiskAnalyzer
-from financial_simulator.strategy.migration_strategy import MigrationStrategyPlanner
+from financial_simulator.risk.monte_carlo import MonteCarloSimulator
 
-from financial_simulator.core.projection import run_projection
+from financial_simulator.strategy.migration_strategy import MigrationStrategyPlanner
 
 
 class SimulationPipeline:
 
-    def run(self, inputs, run_monte_carlo: bool = False):
+    def __init__(self, inputs):
+        self.inputs = inputs
 
-        context = {}
+    def run(self):
 
         # =========================
         # 1️⃣ CORE SIMULATION
         # =========================
-        result, tax_summary = run_projection(inputs)
-
-        context["projection"] = result
-        context["tax_summary"] = tax_summary
+        projection, tax_summary = run_projection(self.inputs)
 
         # =========================
-        # 2️⃣ MONTE CARLO (OPTIONAL)
+        # 2️⃣ SCORE
         # =========================
-        monte_carlo = None
+        scorer = FinancialScorer(self.inputs)
+        score = scorer.calculate(projection)
 
-        if run_monte_carlo:
-            from financial_simulator.risk.monte_carlo import MonteCarloSimulator
-            monte_carlo = MonteCarloSimulator(inputs).run()
-
-        context["monte_carlo"] = monte_carlo
+        diagnosis = FinancialDiagnostics.build_diagnosis(score)
 
         # =========================
-        # 3️⃣ SCORING
+        # 3️⃣ RISK
         # =========================
-        scorer = FinancialScorer(inputs, tax_summary)
-        score = scorer.calculate(result)
-
-        context["score"] = score
+        risk_engine = ImmigrationRiskAnalyzer()
+        risk = risk_engine.calculate_risk(projection, score)
 
         # =========================
-        # 4️⃣ RISK ANALYSIS
+        # 4️⃣ MONTE CARLO
         # =========================
-        risk_analyzer = ImmigrationRiskAnalyzer()
-        risk = risk_analyzer.calculate_risk(result, score)
-
-        context["risk"] = risk
+        monte_carlo = MonteCarloSimulator(self.inputs, runs=300).run()
 
         # =========================
         # 5️⃣ SUCCESS PREDICTION
         # =========================
-        predictor = ImmigrationSuccessPredictor()
-        success = predictor.predict(result, score, monte_carlo, risk)
-
-        context["success_probability"] = success
-
-        # =========================
-        # 6️⃣ STRATEGY
-        # =========================
-        planner = MigrationStrategyPlanner()
-        strategy = planner.suggest(inputs, result)
-
-        context["strategy"] = strategy
+        success_engine = ImmigrationSuccessPredictor()
+        success = success_engine.predict(
+            projection,
+            score,
+            monte_carlo,
+            risk
+        )
 
         # =========================
-        # 7️⃣ INSIGHTS
+        # 6️⃣ READINESS
         # =========================
-        insights_engine = FinancialInsights()
-        insights = insights_engine.generate(result, score)
+        readiness_engine = MigrationReadinessIndex()
+        readiness = readiness_engine.calculate(
+            projection,
+            score,
+            risk,
+            monte_carlo
+        )
 
-        context["insights"] = insights
+        # =========================
+        # 7️⃣ RECOMMENDATIONS
+        # =========================
+        recommendations = FinancialRecommendations().generate(
+            self.inputs,
+            projection,
+            score
+        )
 
         # =========================
-        # FINAL OUTPUT
+        # 8️⃣ STRATEGY
         # =========================
-        return context
+        strategy = MigrationStrategyPlanner().suggest(
+            self.inputs,
+            projection,
+            score
+        )
+
+        return {
+            "projection": projection,
+            "score": score,
+            "diagnosis": diagnosis,
+            "risk": risk,
+            "success": success,
+            "readiness": readiness,
+            "recommendations": recommendations,
+            "strategy": strategy,
+            "monte_carlo": monte_carlo
+        }

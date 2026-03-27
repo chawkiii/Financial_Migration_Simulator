@@ -36,7 +36,7 @@ def run_projection(inputs):
     net_income = net_income_data["net_income"]
 
     # =========================
-    # EXPENSES (BASE ONLY)
+    # EXPENSES
     # =========================
     if inputs.profile.expenses is not None:
         base_expenses = sum(inputs.profile.expenses.values())
@@ -53,22 +53,19 @@ def run_projection(inputs):
         return cashflow - sales_tax
 
     # =========================
-    # ENGINE
+    # ENGINE (V3 ✅)
     # =========================
-    engine = ProjectionEngine(
-        initial_savings=inputs.profile.initial_savings,
+    engine = ProjectionEngine(inputs)
+
+    result = engine.simulate(
         monthly_income=net_income,
         monthly_expenses=base_expenses,
-        months=inputs.config.months,
-        savings_goal=inputs.config.savings_goal,
-        one_time_cost=inputs.config.one_time_cost,
-        months_without_income=inputs.config.months_without_income,
+        monthly_hook=monthly_tax_hook,
+        force=True
     )
 
-    result = engine.simulate(monthly_hook=monthly_tax_hook)
-
     # =========================
-    # TAX SUMMARY (API)
+    # TAX SUMMARY
     # =========================
     tax_summary = {
         "income": net_income_data,

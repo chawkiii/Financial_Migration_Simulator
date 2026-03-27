@@ -159,6 +159,84 @@ PROVINCES_DATA = {
         "payroll_profile": "canada"
     },
 
+
+    "quebec": {
+
+        # =========================
+        # METADATA
+        # =========================
+        "metadata": {
+            "tax_year": 2026,
+            "effective_from": "2026-01-01",
+            "last_updated": "2026-03-16",
+            "data_source": "manual_curated",
+            "version": "1.0"
+        },
+
+        # =========================
+        # INCOME TAX
+        # =========================
+        "income_tax": {
+
+            "federal": {
+                "type": "progressive",
+                "brackets": [
+                    {"up_to": 58523, "rate": 0.14},
+                    {"up_to": 117045, "rate": 0.205},
+                    {"up_to": 181440, "rate": 0.26},
+                    {"up_to": 258482, "rate": 0.29},
+                    {"up_to": 640600, "rate": 0.33},
+                    {"above": 640600, "rate": 0.37}
+                ],
+                "max_marginal_rate": 0.37
+            },
+
+            "provincial": {
+                "province": "quebec",
+                "type": "progressive",
+                "brackets": [
+                    {"up_to": 49275, "rate": 0.14},
+                    {"up_to": 98540, "rate": 0.19},
+                    {"up_to": 119910, "rate": 0.24},
+                    {"above": 119910, "rate": 0.2575}
+                ],
+                "max_marginal_rate": 0.2575
+            }
+        },
+
+        # =========================
+        # SALES TAX
+        # =========================
+        "expense_tax": {
+
+            "gst": 0.05,
+            "pst": 0.09975,   # QST
+            "hst": 0.00,
+            "combined_rate": 0.14975,
+
+            "category_rules": {
+                "groceries": 0.00,
+                "restaurant": 0.14975,
+                "takeout": 0.14975,
+                "transport": 0.14975,
+                "fuel": 0.14975,
+                "phone": 0.14975,
+                "internet": 0.14975,
+                "utilities": 0.14975,
+                "insurance": 0.00,
+                "gym": 0.14975,
+                "entertainment": 0.14975,
+                "subscriptions": 0.14975,
+                "rent": 0.00
+            }
+        },
+        # =========================
+        # PAYROLL REFERENCE
+        # =========================
+        "payroll_profile": "quebec"
+    },
+
+
     "ontario": {
 
         # =========================
@@ -236,81 +314,6 @@ PROVINCES_DATA = {
         "payroll_profile": "canada"
     },
 
-    "quebec": {
-
-        # =========================
-        # METADATA
-        # =========================
-        "metadata": {
-            "tax_year": 2026,
-            "effective_from": "2026-01-01",
-            "last_updated": "2026-03-16",
-            "data_source": "manual_curated",
-            "version": "1.0"
-        },
-
-        # =========================
-        # INCOME TAX
-        # =========================
-        "income_tax": {
-
-            "federal": {
-                "type": "progressive",
-                "brackets": [
-                    {"up_to": 58523, "rate": 0.14},
-                    {"up_to": 117045, "rate": 0.205},
-                    {"up_to": 181440, "rate": 0.26},
-                    {"up_to": 258482, "rate": 0.29},
-                    {"up_to": 640600, "rate": 0.33},
-                    {"above": 640600, "rate": 0.37}
-                ],
-                "max_marginal_rate": 0.37
-            },
-
-            "provincial": {
-                "province": "quebec",
-                "type": "progressive",
-                "brackets": [
-                    {"up_to": 49275, "rate": 0.14},
-                    {"up_to": 98540, "rate": 0.19},
-                    {"up_to": 119910, "rate": 0.24},
-                    {"above": 119910, "rate": 0.2575}
-                ],
-                "max_marginal_rate": 0.2575
-            }
-        },
-
-        # =========================
-        # SALES TAX
-        # =========================
-        "expense_tax": {
-
-            "gst": 0.05,
-            "pst": 0.09975,   # QST
-            "hst": 0.00,
-            "combined_rate": 0.14975,
-
-            "category_rules": {
-                "groceries": 0.00,
-                "restaurant": 0.14975,
-                "takeout": 0.14975,
-                "transport": 0.14975,
-                "fuel": 0.14975,
-                "phone": 0.14975,
-                "internet": 0.14975,
-                "utilities": 0.14975,
-                "insurance": 0.00,
-                "gym": 0.14975,
-                "entertainment": 0.14975,
-                "subscriptions": 0.14975,
-                "rent": 0.00
-            }
-        },
-        # =========================
-        # PAYROLL REFERENCE
-        # =========================
-        "payroll_profile": "quebec"
-    },
 
     "british_columbia": {
 

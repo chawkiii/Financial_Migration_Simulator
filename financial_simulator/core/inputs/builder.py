@@ -45,6 +45,8 @@ def build_inputs(data):
 
     context = EconomicContext(
         province=province_key,
+        province_data=PROVINCES_DATA[province_key],
+        all_provinces_data=PROVINCES_DATA
     )
 
     # =========================

@@ -6,54 +6,70 @@ from financial_simulator.core.inputs.simulation_inputs import SimulationInputs
 
 class FinancialScorer:
 
-    def __init__(self, inputs: SimulationInputs, tax_summary: dict | None = None):
+    def __init__(self, inputs: SimulationInputs):
         self.inputs = inputs
-        self.tax_summary = tax_summary or {}
 
     # =============================
     # MAIN ENTRY
     # =============================
     def calculate(self, result: ProjectionResult) -> dict:
 
-        total_expenses = self.inputs.profile.get_total_expenses()
-        initial_balance = self.inputs.profile.initial_savings - self.inputs.config.one_time_cost
+        initial_balance = (
+            self.inputs.profile.initial_savings
+            - self.inputs.config.one_time_cost
+        )
+
+        avg_expenses = result.avg_monthly_expenses
+        avg_net_income = result.avg_net_income
 
         score = 0
 
-        survival = self._score_survival(initial_balance, total_expenses, result)
-        margin = self._score_margin(total_expenses)
+        survival = self._score_survival(initial_balance, avg_expenses, result)
+        margin = self._score_margin(avg_net_income, avg_expenses)
         stability = self._score_stability(result)
         goal = self._score_goal(result)
         growth = self._score_growth(result, initial_balance)
-        cushion = self._score_cushion(result, total_expenses)
+        cushion = self._score_cushion(result, avg_expenses)
+        tax_efficiency = self._score_tax_efficiency(result)
 
-        score = survival + margin + stability + goal + growth + cushion
+        score = (
+            survival
+            + margin
+            + stability
+            + goal
+            + growth
+            + cushion
+            + tax_efficiency
+        )
+
         score = max(0, min(score, 100))
 
         return {
             "total_score": score,
             "interpretation": self._interpret_score(score),
+
             "survival": survival,
             "margin": margin,
             "stability": stability,
             "growth": growth,
             "cushion": cushion,
             "goal": goal,
+            "tax_efficiency": tax_efficiency,
         }
 
     # =============================
     # SCORING COMPONENTS
     # =============================
 
-    def _score_survival(self, initial_balance, total_expenses, result):
+    def _score_survival(self, initial_balance, avg_expenses, result):
 
-        if total_expenses == 0:
+        if avg_expenses == 0:
             return 25
 
         if initial_balance <= 0 or result.insolvent_before_income:
             return 0
 
-        ratio = initial_balance / total_expenses
+        ratio = initial_balance / avg_expenses
 
         if ratio >= 6:
             return 25
@@ -66,11 +82,9 @@ class FinancialScorer:
         else:
             return 5
 
-    def _score_margin(self, total_expenses):
+    def _score_margin(self, avg_net_income, avg_expenses):
 
-        net_income = self._get_monthly_net_income()
-
-        margin = net_income - total_expenses
+        margin = avg_net_income - avg_expenses
 
         if margin >= 1000:
             return 20
@@ -110,12 +124,12 @@ class FinancialScorer:
         else:
             return 0
 
-    def _score_cushion(self, result: ProjectionResult, total_expenses):
+    def _score_cushion(self, result: ProjectionResult, avg_expenses):
 
-        if total_expenses == 0:
+        if avg_expenses == 0:
             return 15
 
-        cushion = result.final_balance / total_expenses
+        cushion = result.final_balance / avg_expenses
 
         if cushion >= 6:
             return 15
@@ -126,25 +140,35 @@ class FinancialScorer:
         else:
             return 0
 
+    def _score_tax_efficiency(self, result: ProjectionResult):
+        """
+        New component 🔥
+        Rewards lower effective tax pressure.
+        """
+
+        tax_rate = result.tax_rate_effective
+
+        if tax_rate <= 0.15:
+            return 10
+        elif tax_rate <= 0.25:
+            return 7
+        elif tax_rate <= 0.35:
+            return 4
+        else:
+            return 0
+
     # =============================
-    # HELPERS
+    # INTERPRETATION
     # =============================
-
-    def _get_monthly_net_income(self):
-
-        if self.tax_summary and "net_income" in self.tax_summary:
-            return self.tax_summary["net_income"] / 12
-
-        return self.inputs.profile.monthly_income
 
     def _interpret_score(self, score):
 
-        if score >= 80:
-            return "Excellent financial stability"
-        elif score >= 65:
-            return "Good stability"
-        elif score >= 50:
-            return "Moderate risk"
-        elif score >= 35:
-            return "High risk"
-        return "Critical financial risk"
+        if score >= 85:
+            return "Excellent financial profile"
+        elif score >= 70:
+            return "Strong financial stability"
+        elif score >= 55:
+            return "Moderate risk profile"
+        elif score >= 40:
+            return "High risk profile"
+        return "Critical financial situation"

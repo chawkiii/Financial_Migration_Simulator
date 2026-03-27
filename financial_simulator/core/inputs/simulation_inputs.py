@@ -16,6 +16,22 @@ class SimulationInputs:
         self.profile = profile
         self.config = config
         self.context = context
+
+
+    # =========================
+    # PROPERTIES (🔥 FIX)
+    # =========================
+    @property
+    def savings_goal(self):
+        return self.config.savings_goal
+
+    @property
+    def months(self):
+        return self.config.months
+
+    @property
+    def monthly_income(self):
+        return self.profile.monthly_income
     
     # =========================
     # HELPERS (PROXY METHODS)

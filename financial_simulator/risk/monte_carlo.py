@@ -45,15 +45,15 @@ class MonteCarloSimulator:
             self.expense_volatility
         )
 
-        # ✅ cohérent avec ton architecture
-        new_inputs.monthly_income *= (1 + income_variation)
+        # ✅ FIX: accéder au profile
+        new_inputs.profile.monthly_income *= (1 + income_variation)
 
-        if new_inputs.monthly_expenses:
-            new_inputs.monthly_expenses *= (1 + expense_variation)
+        if new_inputs.profile.monthly_expenses:
+            new_inputs.profile.monthly_expenses *= (1 + expense_variation)
 
-        if new_inputs.expenses:
-            for k in new_inputs.expenses:
-                new_inputs.expenses[k] *= (1 + expense_variation)
+        if new_inputs.profile.expenses:
+            for k in new_inputs.profile.expenses:
+                new_inputs.profile.expenses[k] *= (1 + expense_variation)
 
         return new_inputs
 
@@ -74,7 +74,7 @@ class MonteCarloSimulator:
 
             worst_balance = min(worst_balance, final_balance)
 
-            if final_balance >= randomized_inputs.savings_goal:
+            if final_balance >= randomized_inputs.config.savings_goal:
                 successes += 1
 
         success_rate = successes / self.runs

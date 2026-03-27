@@ -2,7 +2,7 @@
 
 from financial_simulator.core.inputs import FinancialInputs
 from financial_simulator.core.simulation_pipeline import SimulationPipeline
-from financial_simulator.core.hints import FIELD_HINTS
+from financial_simulator.data.hints import FIELD_HINTS
 
 
 def print_hint(field):

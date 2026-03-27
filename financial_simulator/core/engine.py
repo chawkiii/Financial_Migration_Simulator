@@ -1,132 +1,150 @@
 # financial_simulator/core/engine.py
 
-from financial_simulator.core.models import MonthlyProjection, ProjectionResult
-from typing import Callable, Optional, List, Dict
-
+from financial_simulator.core.models import ProjectionResult
 
 class ProjectionEngine:
 
-    def __init__(
-        self,
-        initial_savings: float,
-        monthly_income: float,
-        monthly_expenses: float,
-        months: int,
-        savings_goal: float,
-        one_time_cost: float = 0,
-        months_without_income: int = 0,
-        future_purchases: Optional[List[Dict]] = None,
-    ):
-        self.initial_savings = initial_savings
-        self.monthly_income = monthly_income
-        self.monthly_expenses = monthly_expenses
-        self.months = months
-        self.savings_goal = savings_goal
-        self.one_time_cost = one_time_cost
-        self.months_without_income = months_without_income
-        self.future_purchases = future_purchases or []
+    # total_outflow = expenses + taxes + purchases
+    # net_cashflow = income - total_outflow
 
-        # achats regroupés par mois
-        self.purchases_by_month = {}
-        for p in self.future_purchases:
-            month = p["month"]
-            amount = p["amount"]
-            if month <= 0:
-                raise ValueError("Purchase month must be >= 1")
-            self.purchases_by_month.setdefault(month, 0)
-            self.purchases_by_month[month] += amount
+    def __init__(self, inputs):
+        self.inputs = inputs
 
-    # -------------------------
-    # LOGIQUE INTERNE
-    # -------------------------
-
-    def _initial_balance(self) -> float:
-        return self.initial_savings - self.one_time_cost
-
-    def _monthly_cashflow(self, month: int) -> float:
-        if month <= self.months_without_income:
-            return -self.monthly_expenses
-        return self.monthly_income - self.monthly_expenses
-
-    def _minimum_required_before_income(self) -> float:
-        return self.months_without_income * self.monthly_expenses
-
-    # -------------------------
-    # SIMULATION
-    # -------------------------
+    # =============================
+    # MAIN ENTRY
+    # =============================
     def simulate(
         self,
-        monthly_hook: Optional[Callable[[int, float], float]] = None,
-        force: bool = False
+        monthly_income=None,
+        monthly_expenses=None,
+        monthly_hook=None,
+        force=False
     ) -> ProjectionResult:
 
-        projections = []
-        goal_reached_month = None
-        went_negative = False
-        insolvent_before_income = False
+        state = self._initialize_state()
 
-        balance = self._initial_balance()
-        min_required = self._minimum_required_before_income()
+        for month in range(1, self.inputs.config.months + 1):
 
-        # Early failure
-        if balance < min_required and not force:
-            return ProjectionResult(
-                projections=[],
-                final_balance=balance,
-                goal_reached_month=None,
-                went_negative_during_simulation=False,
-                insolvent_before_income=True,
-                max_negative_balance=min(0, balance),
-                average_cashflow=0,
-                min_cushion=0,
+            self._process_month(
+                state,
+                month,
+                monthly_income,
+                monthly_expenses,
+                monthly_hook
             )
 
-        # Boucle principale
-        for month in range(1, self.months + 1):
-            start_balance = balance
-            cashflow = self._monthly_cashflow(month)
+            if not force and state["balance"] < 0:
+                break
 
-            # Hook pour modifier le cashflow / solde (ex: TaxEngine)
-            if monthly_hook:
-                cashflow = monthly_hook(month, cashflow)
+        return self._build_result(state)
 
-            purchase_cost = self.purchases_by_month.get(month, 0)
-            end_balance = start_balance + cashflow - purchase_cost
+    # =============================
+    # INITIALIZATION
+    # =============================
+    def _initialize_state(self):
 
-            if end_balance < 0:
-                went_negative = True
-
-            if end_balance >= self.savings_goal and goal_reached_month is None:
-                goal_reached_month = month
-
-            projections.append(
-                MonthlyProjection(
-                    month_number=month,
-                    starting_balance=start_balance,
-                    net_cashflow=cashflow,
-                    ending_balance=end_balance,
-                    purchase_cost=purchase_cost,
-                )
-            )
-
-            balance = end_balance
-
-        # -------------------------
-        # METRICS
-        # -------------------------
-        net_cashflows = [p.net_cashflow for p in projections]
-        balances = [p.ending_balance for p in projections]
-
-        avg_cashflow = sum(net_cashflows) / len(net_cashflows) if net_cashflows else 0
-        min_cushion = min([b / self.monthly_expenses for b in balances]) if self.monthly_expenses > 0 else 0
-
-        return ProjectionResult(
-            projections=projections,
-            final_balance=balance,
-            goal_reached_month=goal_reached_month,
-            went_negative_during_simulation=went_negative,
-            insolvent_before_income=insolvent_before_income,
-            max_negative_balance=min(0, min(balances)),
-            average_cashflow=avg_cashflow,
-            min_cushion=min_cushion,
+        initial_balance = (
+            self.inputs.profile.initial_savings
+            - self.inputs.config.one_time_cost
         )
+
+        return {
+            "balance": initial_balance,
+            "initial_balance": initial_balance,
+
+            "monthly_records": [],
+
+            "total_tax_paid": 0,
+            "total_gross_income": 0,
+            "total_net_income": 0,
+            "total_expenses": 0,
+
+            "went_negative": False,
+            "insolvent_before_income": initial_balance < 0,
+            "max_negative_balance": 0,
+
+            "goal_reached_month": None,
+        }
+
+    # =============================
+    # MONTH PROCESSING
+    # =============================
+    def _process_month(self, state, month, monthly_income, monthly_expenses, monthly_hook):
+
+        # ✅ fallback intelligent
+        income = monthly_income if monthly_income is not None else self.inputs.profile.monthly_income
+
+        if monthly_expenses is not None:
+            expenses = monthly_expenses
+        else:
+            expenses = self.inputs.get_total_expenses()
+
+        cashflow = income - expenses
+
+        # hook
+        if monthly_hook:
+            cashflow = monthly_hook(month, cashflow)
+
+        state["balance"] += cashflow
+
+        # tracking
+        state["total_net_income"] += income
+        state["total_expenses"] += expenses
+
+        if state["balance"] < 0:
+            state["went_negative"] = True
+            state["max_negative_balance"] = min(
+                state["max_negative_balance"],
+                state["balance"]
+            )
+
+        if (
+            not state["goal_reached_month"]
+            and state["balance"] >= self.inputs.savings_goal  # dans l'idéal tracker l'objectif chaque mois et pas juste le premier mois où on l'atteint.
+        ):
+            state["goal_reached_month"] = month
+
+        state["monthly_records"].append({
+            "month": month,
+            "balance": state["balance"],
+            "net_income": income,
+            "expenses": expenses,
+        })
+
+
+
+    # =============================
+    # RESULT BUILDER
+    # =============================
+    def _build_result(self, state) -> ProjectionResult:
+
+        months = len(state["monthly_records"])
+
+        avg_net_income = (
+            state["total_net_income"] / months if months else 0
+        )
+
+        avg_expenses = (
+            state["total_expenses"] / months if months else 0
+        )
+
+        tax_rate_effective = (
+            state["total_tax_paid"] / state["total_gross_income"]
+            if state["total_gross_income"] > 0 else 0
+        )
+
+        result = ProjectionResult()
+
+        result.final_balance = state["balance"]
+        result.avg_net_income = avg_net_income
+        result.avg_monthly_expenses = avg_expenses
+        result.total_tax_paid = state["total_tax_paid"]
+
+        result.went_negative_during_simulation = state["went_negative"]
+        result.max_negative_balance = state["max_negative_balance"]
+        result.goal_reached_month = state["goal_reached_month"]
+        result.insolvent_before_income = state["insolvent_before_income"]
+
+        result.monthly_balances = [r["balance"] for r in state["monthly_records"]]
+
+        return result

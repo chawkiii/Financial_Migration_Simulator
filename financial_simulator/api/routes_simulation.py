@@ -1,10 +1,13 @@
 # financial_simulator/api/routes_simulation.py
 
 from fastapi import APIRouter, HTTPException
-from fastapi.encoders import jsonable_encoder
 
 from financial_simulator.core.inputs import build_inputs
 from financial_simulator.core.simulation_pipeline import SimulationPipeline
+from financial_simulator.analysis.scenario_explorer import MigrationScenarioExplorer
+from financial_simulator.analysis.province_optimizer import ProvinceOptimizer
+from financial_simulator.analysis.insights_engine import InsightsEngine
+from financial_simulator.core.models.response import SimulationResponse
 
 from .schemas import SimulationRequest
 
@@ -15,41 +18,67 @@ router = APIRouter()
 def simulate(request: SimulationRequest):
 
     try:
-        # =========================
-        # BUILD INPUTS
-        # =========================
         inputs = build_inputs(request)
 
-        # =========================
-        # RUN PIPELINE
-        # =========================
-        pipeline = SimulationPipeline()
-        output = pipeline.run(inputs, run_monte_carlo=False)
+        pipeline = SimulationPipeline(inputs)
+        result = pipeline.run()
+
+        projection = result["projection"]
 
         # =========================
-        # SERIALIZATION SAFE
+        # SCENARIOS
         # =========================
-        result = output["projection"]
+        explorer = MigrationScenarioExplorer()
 
-        response = {
-            "summary": result.to_dict(),
-            "tax": output["tax_summary"],
-            "score": output["score"],
-            "risk": output["risk"],
-            "success_probability": output["success_probability"],
-            "strategy": output["strategy"],
-            "insights": output["insights"],
-        }
+        income_scenarios = explorer.explore_income_range(
+            inputs,
+            [
+                inputs.profile.monthly_income * 0.8,
+                inputs.profile.monthly_income,
+                inputs.profile.monthly_income * 1.2,
+            ]
+        )
 
-        # ✅ CRUCIAL: convert everything to JSON-safe
-        return jsonable_encoder(response)
+        # =========================
+        # OPTIMIZATION
+        # =========================
+        optimizer = ProvinceOptimizer(
+            inputs,
+            inputs.context.all_provinces_data
+        )
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        province_results = optimizer.find_best_provinces()
 
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid key: {str(e)}")
+        # =========================
+        # INSIGHTS
+        # =========================
+        insights = InsightsEngine(
+            inputs,
+            projection,
+            result["score"],
+            province_results
+        ).generate()
+
+        # =========================
+        # FINAL RESPONSE
+        # =========================
+        response = SimulationResponse(
+            projection=projection,
+            score=result["score"],
+            risk=result["risk"],
+            success=result["success"],
+            readiness=result["readiness"],
+            insights=insights,
+            recommendations=result["recommendations"],
+            strategy=result["strategy"],
+            scenarios={
+                "income_variations": income_scenarios
+            },
+            optimization=province_results,
+            monte_carlo=result["monte_carlo"]
+        )
+
+        return response.to_dict()
 
     except Exception as e:
-        print("ERROR:", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=400, detail=str(e))
